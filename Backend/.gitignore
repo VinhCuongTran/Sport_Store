@@ -1,6 +1,6 @@
 #Project folder
 .idea
-
+.env
 
 # Logs
 logs
