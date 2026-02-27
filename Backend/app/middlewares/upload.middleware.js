@@ -3,7 +3,6 @@ const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 const config = require("../config");
 
-
 const CategoryModel = require("../models/category.model");
 const ProductModel = require("../models/product.model");
 
@@ -23,6 +22,21 @@ const storage = new CloudinaryStorage({
       if (req.originalUrl.includes("/api/brands")) {
         folderPath = "sport_store/brands";
       }
+      // 2. Xử lý cho User
+      else if (req.originalUrl.includes("/api/users")) {
+        folderPath = "sport_store/users";
+
+        // Dùng Regex để tìm ID trong URL
+        const match = req.originalUrl.match(/\/api\/users\/(\d+)/);
+        if (match) {
+          const userId = match[1];
+          return {
+            folder: folderPath,
+            allowed_formats: ["jpg", "png", "jpeg", "webp"],
+            public_id: `avatar_${userId}`, // Cấu hình để Cloudinary đặt tên file là avatar_{id}
+          };
+        }
+      }
       // 2. Xử lý cho Product (Tạo thư mục dựa theo Category)
       else if (req.originalUrl.includes("/api/products")) {
         let categoryId = req.body.category_id;
@@ -37,14 +51,16 @@ const storage = new CloudinaryStorage({
         if (categoryId) {
           // Lấy thông tin danh mục hiện tại
           const leafCategory = await CategoryModel.getById(categoryId);
-          
+
           if (leafCategory) {
             let parentName = "Khac"; // Mặc định nếu không có cha
             let leafName = leafCategory.name;
 
             // Nếu danh mục này có cha (có parent_id), đi tìm tên danh mục cha
             if (leafCategory.parent_id) {
-              const parentCategory = await CategoryModel.getById(leafCategory.parent_id);
+              const parentCategory = await CategoryModel.getById(
+                leafCategory.parent_id,
+              );
               if (parentCategory) {
                 parentName = parentCategory.name;
               }
