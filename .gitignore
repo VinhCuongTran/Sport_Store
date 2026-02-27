@@ -1,7 +1,7 @@
 #Project folder
-.idea
-.env
-
+Backend/.idea/
+Backend/.env
+Database
 # Logs
 logs
 *.log
