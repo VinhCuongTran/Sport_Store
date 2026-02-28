@@ -1,0 +1,11 @@
+const express = require("express");
+const router = express.Router();
+const cartController = require("../controllers/cart.controller");
+
+router.get("/:userId", cartController.getCart);
+router.post("/add", cartController.addToCart);
+router.put("/item/:itemId", cartController.updateQuantity);
+router.delete("/item/:itemId", cartController.removeItem);
+router.delete("/clear/:userId", cartController.clearCart);
+
+module.exports = router;
