@@ -21,6 +21,21 @@ const storage = new CloudinaryStorage({
       // 1. Xử lý cho Brand
       if (req.originalUrl.includes("/api/brands")) {
         folderPath = "sport_store/brands";
+
+        // Lấy tên thương hiệu từ req.body (nếu có)
+        if (req.body.name) {
+          // Chuẩn hóa tên thương hiệu: Xóa dấu tiếng Việt, thay khoảng trắng bằng gạch dưới để URL hợp lệ
+          const safeBrandName = req.body.name
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/\s+/g, "_");
+
+          return {
+            folder: folderPath,
+            allowed_formats: ["jpg", "png", "jpeg", "webp"],
+            public_id: `${safeBrandName}_Logo`, // Cấu hình đổi tên file ở đây
+          };
+        }
       }
       // 2. Xử lý cho User
       else if (req.originalUrl.includes("/api/users")) {

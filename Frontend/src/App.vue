@@ -1,12 +1,16 @@
-<script>
-export default {};
-</script>
 <template>
-  <h1>Hello, Vue.js!</h1>
+  <router-view></router-view>
 </template>
+
+<script setup>
+// Không cần import gì thêm ở đây
+</script>
+
 <style>
-.page{
-  max-width: 400px;
-  margin: auto;
+/* Bạn có thể để trống phần style này hoặc reset CSS cơ bản */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
 }
 </style>
