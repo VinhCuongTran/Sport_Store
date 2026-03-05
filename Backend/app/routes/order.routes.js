@@ -17,5 +17,10 @@ router.put(
   isAdminOrStaff,
   orderController.updateOrderStatus,
 );
+// Thêm 2 route này vào file order.routes.js
+// Admin lấy tất cả đơn hàng
+router.get("/", verifyToken, isAdminOrStaff, orderController.getAllOrders);
+// Admin xem chi tiết 1 đơn hàng (có thể dùng chung với User nếu muốn, ở đây set cho Admin/Staff trước)
+router.get("/:id", verifyToken, orderController.getOrderById);
 
 module.exports = router;

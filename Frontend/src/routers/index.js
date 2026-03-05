@@ -2,11 +2,11 @@ import { createWebHistory, createRouter } from "vue-router";
 import AuthService from "../services/auth.service";
 
 const routes = [
-  // === CÁC TRANG DÀNH CHO ADMIN ===
+  // 1. CÁC TRANG DÀNH CHO ADMIN
   {
     path: "/admin",
     component: () => import("../components/Admin/AdminLayout.vue"),
-    meta: { requiresAdmin: true }, // Đánh dấu cần quyền Admin
+    meta: { requiresAdmin: true },
     children: [
       {
         path: "",
@@ -37,25 +37,44 @@ const routes = [
         path: "vouchers",
         name: "admin-voucher",
         component: () => import("../views/Admin/AdminVoucher.vue"),
-      }
+      },
+      {
+        path: "reviews",
+        name: "admin-review",
+        component: () => import("../views/Admin/AdminReview.vue"),
+      },
+      {
+        path: "orders",
+        name: "admin-order",
+        component: () => import("../views/Admin/AdminOrder.vue"),
+      },
     ],
   },
 
-  // === CÁC TRANG DÀNH CHO KHÁCH (CLIENT) ===
+  // 2. CÁC TRANG CỦA KHÁCH CÓ HEADER & FOOTER
   {
     path: "/",
-    name: "home",
-    component: () => import("../views/Home.vue"),
+    component: () => import("../components/DefaultLayout.vue"),
+    children: [
+      {
+        path: "",
+        name: "home",
+        component: () => import("../views/Home.vue"),
+      },
+      // ĐEM TRANG 404 VÀO TRONG NÀY ĐỂ NÓ CÓ HEADER VÀ FOOTER
+      {
+        path: "/:pathMatch(.*)*",
+        name: "notfound",
+        component: () => import("../views/NotFound.vue"),
+      },
+    ],
   },
+
+  // 3. CÁC TRANG ĐỘC LẬP (Không dùng Header/Footer chung)
   {
     path: "/login",
     name: "login",
-    component: () => import("../views/Login.vue"), // Dùng 1 trang Login duy nhất
-  },
-  {
-    path: "/:pathMatch(.*)*",
-    name: "notfound",
-    component: () => import("../views/NotFound.vue"),
+    component: () => import("../views/Login.vue"),
   },
 ];
 
@@ -64,17 +83,11 @@ const router = createRouter({
   routes,
 });
 
-// Navigation Guard: Bảo vệ các trang Admin
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   if (to.matched.some((record) => record.meta.requiresAdmin)) {
     if (!AuthService.isAdmin()) {
-      // Nếu không phải admin, đẩy về trang login chung
-      next({ name: "login" });
-    } else {
-      next();
+      return { name: "login" };
     }
-  } else {
-    next();
   }
 });
 

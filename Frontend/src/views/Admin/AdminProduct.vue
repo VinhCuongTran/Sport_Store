@@ -37,6 +37,18 @@
             <br /><small class="text-muted"
               >Giá từ: {{ formatPrice(product.min_price) }}</small
             >
+            <br />
+            <span
+              v-if="product.active_discount > 0"
+              class="badge category-badge"
+              style="
+                background-color: #dc3545;
+                margin-top: 5px;
+                display: inline-block;
+              "
+            >
+              Đang SALE {{ product.active_discount }}%
+            </span>
           </td>
           <td>
             <span class="badge category-badge">{{
@@ -150,6 +162,40 @@
             </select>
           </div>
 
+          <hr />
+
+          <div class="variant-header">
+            <h4>Cài đặt Khuyến mãi (Flash Sale)</h4>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Giảm giá (%)</label>
+              <input
+                v-model="formData.discount_percent"
+                type="number"
+                min="0"
+                max="100"
+                class="input-text"
+                placeholder="Ví dụ: 20"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label>Thời gian Bắt đầu</label>
+              <input
+                v-model="formData.sale_start"
+                type="datetime-local"
+                class="input-text"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label>Thời gian Kết thúc</label>
+              <input
+                v-model="formData.sale_end"
+                type="datetime-local"
+                class="input-text"
+              />
+            </div>
+          </div>
           <hr />
 
           <div class="variant-header">
@@ -277,7 +323,15 @@ const showModal = ref(false);
 const isLoading = ref(false);
 const isEditMode = ref(false);
 
-// Xóa price ở formData gốc
+// Hàm format datetime cho thẻ input type="datetime-local"
+const formatForInput = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  const tzOffset = date.getTimezoneOffset() * 60000;
+  return new Date(date - tzOffset).toISOString().slice(0, 16);
+};
+
+// Cập nhật formData gốc để chứa 3 trường khuyến mãi
 const formData = ref({
   id: null,
   name: "",
@@ -286,7 +340,11 @@ const formData = ref({
   brand_id: "",
   sport_id: "",
   status: "active",
+  discount_percent: 0,
+  sale_start: "",
+  sale_end: "",
 });
+
 const variants = ref([]);
 const selectedFiles = ref([]);
 
@@ -336,6 +394,7 @@ const handleDelete = async (id) => {
 
 const openCreateModal = () => {
   isEditMode.value = false;
+  // Reset lại toàn bộ bao gồm cả trường khuyến mãi
   formData.value = {
     id: null,
     name: "",
@@ -344,6 +403,9 @@ const openCreateModal = () => {
     brand_id: "",
     sport_id: "",
     status: "active",
+    discount_percent: 0,
+    sale_start: "",
+    sale_end: "",
   };
   variants.value = [];
   selectedFiles.value = [];
@@ -355,6 +417,8 @@ const openEditModal = async (id) => {
   try {
     const productDetail = await ProductService.get(id);
     isEditMode.value = true;
+
+    // Đổ dữ liệu vào form, kèm theo thông tin Khuyến mãi
     formData.value = {
       id: productDetail.id,
       name: productDetail.name,
@@ -363,6 +427,9 @@ const openEditModal = async (id) => {
       brand_id: productDetail.brand_id,
       sport_id: productDetail.sport_id,
       status: productDetail.status,
+      discount_percent: productDetail.discount_percent || 0,
+      sale_start: formatForInput(productDetail.sale_start),
+      sale_end: formatForInput(productDetail.sale_end),
     };
     variants.value = productDetail.variants || [];
     selectedFiles.value = [];
@@ -379,7 +446,6 @@ const closeModal = () => {
 };
 
 const addVariant = () => {
-  // Biến thể mặc định có giá là 0
   variants.value.push({ size: "", color: "", price: 0, stock: 0 });
 };
 const removeVariant = (index) => {
@@ -403,6 +469,14 @@ const handleSave = async () => {
       if (formData.value.sport_id)
         data.append("sport_id", formData.value.sport_id);
       data.append("status", formData.value.status);
+
+      // Gửi thêm dữ liệu Khuyến mãi
+      data.append("discount_percent", formData.value.discount_percent || 0);
+      if (formData.value.sale_start)
+        data.append("sale_start", formData.value.sale_start);
+      if (formData.value.sale_end)
+        data.append("sale_end", formData.value.sale_end);
+
       data.append("variants", JSON.stringify(variants.value));
 
       selectedFiles.value.forEach((file) => {

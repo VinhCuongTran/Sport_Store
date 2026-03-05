@@ -8,7 +8,7 @@ const Product = {
 
       // Bỏ trường price khỏi bảng products
       const [productResult] = await connection.query(
-        "INSERT INTO products (name, description, category_id, sport_id, brand_id, status) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO products (name, description, category_id, sport_id, brand_id, status, discount_percent, sale_start, sale_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           productData.name,
           productData.description,
@@ -16,6 +16,9 @@ const Product = {
           productData.sport_id || null,
           productData.brand_id || null,
           "active",
+          productData.discount_percent || 0,
+          productData.sale_start || null,
+          productData.sale_end || null,
         ],
       );
       const productId = productResult.insertId;
@@ -60,14 +63,15 @@ const Product = {
   getAll: async () => {
     // Lấy min_price từ bảng product_variants để hiển thị ngoài danh sách
     const [rows] = await db.query(`
-      SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name, i.image_url as thumbnail,
-             (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price
-      FROM products p
-      LEFT JOIN brands b ON p.brand_id = b.id
-      LEFT JOIN categories c ON p.category_id = c.id
-      LEFT JOIN sports s ON p.sport_id = s.id
-      LEFT JOIN product_images i ON p.id = i.product_id AND i.is_thumbnail = TRUE
-    `);
+  SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name, i.image_url as thumbnail,
+         (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price,
+         IF(p.sale_start <= NOW() AND p.sale_end >= NOW(), p.discount_percent, 0) as active_discount
+  FROM products p
+  LEFT JOIN brands b ON p.brand_id = b.id
+  LEFT JOIN categories c ON p.category_id = c.id
+  LEFT JOIN sports s ON p.sport_id = s.id
+  LEFT JOIN product_images i ON p.id = i.product_id AND i.is_thumbnail = TRUE
+`);
     return rows;
   },
 
@@ -96,7 +100,7 @@ const Product = {
 
       // Bỏ trường price
       await connection.query(
-        "UPDATE products SET name=?, description=?, category_id=?, sport_id=?, brand_id=?, status=? WHERE id=?",
+        "UPDATE products SET name=?, description=?, category_id=?, sport_id=?, brand_id=?, status=?, discount_percent=?, sale_start=?, sale_end=? WHERE id=?",
         [
           data.name,
           data.description,
@@ -104,6 +108,9 @@ const Product = {
           data.sport_id || null,
           data.brand_id || null,
           data.status || "active",
+          data.discount_percent || 0,
+          data.sale_start || null,
+          data.sale_end || null,
           id,
         ],
       );

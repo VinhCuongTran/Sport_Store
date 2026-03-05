@@ -60,6 +60,11 @@ const OrderController = {
     });
   }),
 
+  getAllOrders: asyncHandler(async (req, res) => {
+    const orders = await OrderModel.getAll();
+    res.json(orders);
+  }),
+
   // Lấy lịch sử đơn hàng của User
   getUserOrders: asyncHandler(async (req, res) => {
     const userId = req.params.userId;
@@ -80,13 +85,22 @@ const OrderController = {
   // Cập nhật trạng thái đơn hàng (Dành cho Staff/Admin)
   updateOrderStatus: asyncHandler(async (req, res) => {
     const orderId = req.params.id;
-    const { status, staff_id } = req.body;
+    const { status, payment_status } = req.body;
+    const staff_id = req.user.id; // Lấy ID của Admin/Staff đang thao tác từ Token
 
-    if (!status) {
-      throw new ApiError(400, "Vui lòng cung cấp trạng thái mới");
+    if (!status || !payment_status) {
+      throw new ApiError(
+        400,
+        "Vui lòng cung cấp trạng thái đơn hàng và trạng thái thanh toán",
+      );
     }
 
-    const isUpdated = await OrderModel.updateStatus(orderId, status, staff_id);
+    const isUpdated = await OrderModel.updateStatus(
+      orderId,
+      status,
+      payment_status,
+      staff_id,
+    );
     if (!isUpdated) {
       throw new ApiError(404, "Không tìm thấy đơn hàng để cập nhật");
     }

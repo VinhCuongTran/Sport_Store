@@ -1,10 +1,22 @@
 import { createApp } from 'vue'
 import App from './App.vue'
-import router from './routers' // Trỏ tới thư mục routers
-// import './assets/main.css' // (Bạn có thể thêm css sau)
+import router from './routers'
+
+// Cấu hình Vuetify
+import 'vuetify/styles'
+import { createVuetify } from 'vuetify'
+import * as components from 'vuetify/components'
+import * as directives from 'vuetify/directives'
+import '@mdi/font/css/materialdesignicons.css'
+
+const vuetify = createVuetify({
+  components,
+  directives,
+})
 
 const app = createApp(App);
 
 app.use(router);
+app.use(vuetify); // Sử dụng vuetify
 
 app.mount('#app');

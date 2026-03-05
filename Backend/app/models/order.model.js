@@ -62,6 +62,17 @@ const Order = {
     }
   },
 
+  getAll: async () => {
+    const [rows] = await db.query(`
+      SELECT o.*, u.name as customer_name, v.code as voucher_code
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN vouchers v ON o.voucher_id = v.id
+      ORDER BY o.created_at DESC
+    `);
+    return rows;
+  },
+
   // Lấy danh sách đơn hàng của một user
   getByUserId: async (userId) => {
     const [rows] = await db.query(
@@ -90,10 +101,12 @@ const Order = {
   },
 
   // Cập nhật trạng thái đơn hàng (Dành cho Admin/Staff)
-  updateStatus: async (id, status, staffId = null) => {
+  updateStatus: async (id, status, payment_status, staffId = null) => {
     const [result] = await db.query(
-      `UPDATE orders SET status = ?, staff_id = COALESCE(?, staff_id) WHERE id = ?`,
-      [status, staffId, id],
+      `UPDATE orders 
+       SET status = ?, payment_status = ?, staff_id = COALESCE(?, staff_id) 
+       WHERE id = ?`,
+      [status, payment_status, staffId, id],
     );
     return result.affectedRows > 0;
   },
