@@ -8,6 +8,8 @@
                     <router-link :to="{ name: 'admin-category' }" class="nav-link">Quản lý Danh mục</router-link>
                     <router-link :to="{ name: 'admin-brand' }" class="nav-link">Quản lý Thương hiệu</router-link>
                     <router-link :to="{ name: 'admin-user' }" class="nav-link">Quản lý Người dùng</router-link>
+                    <router-link :to="{ name: 'admin-product' }" class="nav-link">Quản lý Sản phẩm</router-link>
+                    <router-link :to="{ name: 'admin-voucher' }" class="nav-link">Quản lý Voucher</router-link>
                     </nav>
             </aside>
             <main class="content">

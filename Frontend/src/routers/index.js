@@ -27,6 +27,16 @@ const routes = [
         path: "users",
         name: "admin-user",
         component: () => import("../views/Admin/AdminUser.vue"),
+      },
+      {
+        path: "products",
+        name: "admin-product",
+        component: () => import("../views/Admin/AdminProduct.vue"),
+      },
+      {
+        path: "vouchers",
+        name: "admin-voucher",
+        component: () => import("../views/Admin/AdminVoucher.vue"),
       }
     ],
   },

@@ -70,17 +70,59 @@ const AuthController = {
     }
 
     const payload = { id: user.id, role: user.role };
-    const token = jwt.sign(payload, config.jwt.secret, {
-      expiresIn: config.jwt.expiresIn,
+
+    // 1. Tạo Access Token (Ngắn hạn: ví dụ 1 giờ)
+    const accessToken = jwt.sign(payload, config.jwt.secret, {
+      expiresIn: config.jwt.expiresIn, // Thay đổi tùy config của bạn
     });
+
+    // 2. Tạo Refresh Token (Dài hạn: ví dụ 7 ngày)
+    // Lưu ý: Tốt nhất nên cấu hình một chuỗi secret khác cho refresh token
+    const refreshToken = jwt.sign(payload, config.jwt.refreshSecret, {
+      expiresIn: config.jwt.refreshExpiresIn,
+    });
+
+    // TÙY CHỌN: Bạn nên lưu refreshToken này vào Database (bảng users) để quản lý (cho phép thu hồi khi cần)
+    // await UserModel.update(user.id, { refresh_token: refreshToken });
 
     delete user.password;
 
     res.json({
       message: "Đăng nhập thành công",
-      token: token,
+      accessToken: accessToken,
+      refreshToken: refreshToken, // Trả thêm cái này về
       user: user,
     });
+  }),
+
+  // Thêm hàm mới: API để cấp lại Access Token
+  refreshToken: asyncHandler(async (req, res) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      throw new ApiError(403, "Không tìm thấy Refresh Token");
+    }
+
+    try {
+      // 1. SỬA CHỖ NÀY: Dùng config.jwt.refreshSecret để xác minh
+      const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret);
+
+      const payload = { id: decoded.id, role: decoded.role };
+
+      // 2. SỬA CHỖ NÀY: Lấy thời gian sống từ file config thay vì gõ cứng "1h"
+      const newAccessToken = jwt.sign(payload, config.jwt.secret, {
+        expiresIn: config.jwt.expiresIn,
+      });
+
+      res.json({
+        accessToken: newAccessToken,
+      });
+    } catch (error) {
+      throw new ApiError(
+        403,
+        "Refresh Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.",
+      );
+    }
   }),
 
   logout: asyncHandler(async (req, res) => {

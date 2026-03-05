@@ -45,7 +45,8 @@ const submitLogin = async () => {
     const response = await AuthService.login(formData);
 
     // Lưu token và user vào localStorage
-    localStorage.setItem("token", response.token);
+    localStorage.setItem("token", response.accessToken);
+    localStorage.setItem("refreshToken", response.refreshToken);
     localStorage.setItem("user", JSON.stringify(response.user));
 
     // PHÂN LUỒNG ĐIỀU HƯỚNG DỰA VÀO ROLE

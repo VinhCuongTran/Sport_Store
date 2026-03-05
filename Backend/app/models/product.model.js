@@ -6,27 +6,28 @@ const Product = {
     try {
       await connection.beginTransaction();
 
+      // Bỏ trường price khỏi bảng products
       const [productResult] = await connection.query(
-        "INSERT INTO products (name, description, price, category_id, sport_id, brand_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO products (name, description, category_id, sport_id, brand_id, status) VALUES (?, ?, ?, ?, ?, ?)",
         [
           productData.name,
           productData.description,
-          productData.price,
           productData.category_id,
           productData.sport_id || null,
-          productData.brand_id,
+          productData.brand_id || null,
           "active",
         ],
       );
       const productId = productResult.insertId;
 
+      // Lưu giá (price) vào từng biến thể
       if (variants && variants.length > 0) {
         const variantValues = variants.map((v) => [
           productId,
           v.size,
           v.color,
-          v.price,
-          v.stock,
+          v.price || 0, // Giá riêng của biến thể
+          v.stock || 0,
         ]);
         await connection.query(
           "INSERT INTO product_variants (product_id, size, color, price, stock) VALUES ?",
@@ -57,14 +58,16 @@ const Product = {
   },
 
   getAll: async () => {
+    // Lấy min_price từ bảng product_variants để hiển thị ngoài danh sách
     const [rows] = await db.query(`
-            SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name, i.image_url as thumbnail
-            FROM products p
-            LEFT JOIN brands b ON p.brand_id = b.id
-            LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN sports s ON p.sport_id = s.id
-            LEFT JOIN product_images i ON p.id = i.product_id AND i.is_thumbnail = TRUE
-        `);
+      SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name, i.image_url as thumbnail,
+             (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price
+      FROM products p
+      LEFT JOIN brands b ON p.brand_id = b.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN sports s ON p.sport_id = s.id
+      LEFT JOIN product_images i ON p.id = i.product_id AND i.is_thumbnail = TRUE
+    `);
     return rows;
   },
 
@@ -91,15 +94,15 @@ const Product = {
     try {
       await connection.beginTransaction();
 
+      // Bỏ trường price
       await connection.query(
-        "UPDATE products SET name=?, description=?, price=?, category_id=?, sport_id=?, brand_id=?, status=? WHERE id=?",
+        "UPDATE products SET name=?, description=?, category_id=?, sport_id=?, brand_id=?, status=? WHERE id=?",
         [
           data.name,
           data.description,
-          data.price,
           data.category_id,
           data.sport_id || null,
-          data.brand_id,
+          data.brand_id || null,
           data.status || "active",
           id,
         ],
@@ -112,6 +115,7 @@ const Product = {
         );
         const existingIds = existingVariants.map((v) => v.id);
         const incomingIds = variants.filter((v) => v.id).map((v) => v.id);
+
         const idsToDelete = existingIds.filter(
           (vId) => !incomingIds.includes(vId),
         );
@@ -121,20 +125,29 @@ const Product = {
             [idsToDelete],
           );
         }
+
         for (const variant of variants) {
           if (variant.id) {
+            // Cập nhật giá và các thông tin khác cho biến thể cũ
             await connection.query(
-              "UPDATE product_variants SET stock=? WHERE id=?",
-              [variant.stock || 0, variant.id],
+              "UPDATE product_variants SET size=?, color=?, price=?, stock=? WHERE id=?",
+              [
+                variant.size,
+                variant.color,
+                variant.price || 0,
+                variant.stock || 0,
+                variant.id,
+              ],
             );
           } else {
+            // Thêm biến thể mới
             await connection.query(
               "INSERT INTO product_variants (product_id, size, color, price, stock) VALUES (?, ?, ?, ?, ?)",
               [
                 id,
                 variant.size,
                 variant.color,
-                variant.price || null,
+                variant.price || 0,
                 variant.stock || 0,
               ],
             );
