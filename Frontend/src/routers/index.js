@@ -61,6 +61,36 @@ const routes = [
         name: "home",
         component: () => import("../views/Home.vue"),
       },
+      {
+        path: "products",
+        name: "products",
+        component: () => import("../views/Products.vue"),
+      },
+      {
+        path: "product/:id",
+        name: "product-detail",
+        component: () => import("../views/ProductDetail.vue"),
+      },
+      {
+        path: "cart",
+        name: "cart",
+        component: () => import("../views/Cart.vue"),
+      },
+      {
+        path: "profile",
+        name: "profile",
+        component: () => import("../views/Profile.vue"),
+      },
+      {
+        path: "checkout",
+        name: "checkout",
+        component: () => import("../views/Checkout.vue"),
+      },
+      {
+        path: "orders",
+        name: "orders",
+        component: () => import("../views/Order.vue"),
+      },
       // ĐEM TRANG 404 VÀO TRONG NÀY ĐỂ NÓ CÓ HEADER VÀ FOOTER
       {
         path: "/:pathMatch(.*)*",
@@ -84,11 +114,17 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from) => {
+  // Kiểm tra xem route chuẩn bị vào có yêu cầu quyền Admin không
   if (to.matched.some((record) => record.meta.requiresAdmin)) {
+    // Nếu không phải là Admin hoặc Staff thì ĐẨY về trang đăng nhập
     if (!AuthService.isAdmin()) {
-      return { name: "login" };
+      return { name: "login" }; // Dùng return thay vì gọi next({ name: "login" })
     }
   }
+
+  // Nếu hợp lệ, không cần gọi next(), chỉ cần không return gì cả (hoặc return true)
+  // Vue Router 4 sẽ tự động cho phép đi tiếp!
+  return true;
 });
 
 export default router;

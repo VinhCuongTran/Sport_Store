@@ -1,7 +1,10 @@
 <template>
   <header class="admin-header">
-    <div class="logo">
-      <h3>Sport Store Admin</h3>
+    <div class="logo d-flex align-center">
+      <div style="background: white; padding: 2px 5px; border-radius: 4px; display: inline-flex; margin-right: 10px;">
+        <img src="../../assets/logo.jpg" alt="Admin Logo" height="30" />
+      </div>
+      <h3 class="m-0">Admin Panel</h3>
     </div>
     <div class="user-info">
       <span v-if="user" class="greeting"

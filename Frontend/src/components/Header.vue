@@ -1,18 +1,17 @@
 <template>
   <v-app-bar app color="black" dark flat elevation="2">
     <v-container fluid class="d-flex align-center py-0 px-6">
-      <v-toolbar-title
-        class="font-weight-bold text-h6 d-flex align-center cursor-pointer"
-        @click="$router.push('/')"
-      >
-        <v-icon class="mr-2">mdi-basketball</v-icon>
-        Sport Store
+      <v-toolbar-title class="cursor-pointer" @click="$router.push('/')">
+        <div class="custom-logo-wrap">
+          <img src="../assets/logo.jpg" alt="Logo" class="custom-logo-img" />
+          <span class="custom-logo-text d-none d-sm-inline">Sport Store</span>
+        </div>
       </v-toolbar-title>
 
       <v-spacer></v-spacer>
 
       <div class="hidden-sm-and-down mr-4">
-        <v-btn text to="/" class="text-capitalize font-weight-medium"
+        <v-btn exact text to="/" class="text-capitalize font-weight-medium"
           >Trang chủ</v-btn
         >
         <v-btn text to="/products" class="text-capitalize font-weight-medium"
@@ -142,5 +141,29 @@ watch(
 }
 .cursor-pointer {
   cursor: pointer;
+}
+
+/* Khung bọc trực tiếp logo và chữ */
+.custom-logo-wrap {
+  display: flex;
+  align-items: center; /* Căn giữa tuyệt đối theo trục dọc */
+  gap: 15px; /* Khoảng cách giữa hình và chữ */
+}
+
+/* Chỉnh hình Logo */
+.custom-logo-img {
+  height: 55px; /* Chiều cao logo */
+  width: auto;
+  display: block;
+  border-radius: 8px; /* Bo góc logo */
+}
+
+/* Chỉnh chữ Sport Store */
+.custom-logo-text {
+  font-size: 30px; /* Kích thước chữ */
+  font-weight: 900; /* In đậm tối đa */
+  color: #ffffff; /* Màu trắng */
+  line-height: 1; /* Loại bỏ khoảng trắng tàng hình của font chữ */
+  transform: translateY(-2px); /* Dịch chữ lên trên 2px cho cân đối với hình */
 }
 </style>
