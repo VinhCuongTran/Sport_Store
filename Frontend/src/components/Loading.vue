@@ -1,6 +1,6 @@
 <template>
   <div v-if="visible" class="loading-overlay">
-    <div class="spinner"></div>
+    <div class="loader"></div>
     <p class="loading-text">{{ text }}</p>
   </div>
 </template>
@@ -8,7 +8,6 @@
 <script setup>
 import { defineProps } from "vue";
 
-// Nhận 2 props: visible (để ẩn/hiện) và text (để đổi chữ hiển thị nếu cần)
 defineProps({
   visible: {
     type: Boolean,
@@ -28,38 +27,51 @@ defineProps({
   left: 0;
   width: 100vw;
   height: 100vh;
-  /* Lớp nền mờ màu trắng */
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.8);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  z-index: 9999; /* Đảm bảo luôn nằm trên cùng */
+  z-index: 9999;
 }
 
-/* CSS cho vòng xoay loading */
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #007bff;
+.loader {
+  width: 60px;
+  aspect-ratio: 1;
+  display: grid;
+  border: 4px solid #0000;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  border-right-color: #77e51f;
+  animation: l15 1s infinite linear;
+}
+
+.loader::before,
+.loader::after {
+  content: "";
+  grid-area: 1/1;
+  margin: 2px;
+  border: inherit;
+  border-radius: 50%;
+  animation: l15 2s infinite;
+}
+
+.loader::after {
+  margin: 8px;
+  animation-duration: 3s;
+}
+
+@keyframes l15 {
+  100% {
+    transform: rotate(1turn);
+  }
 }
 
 .loading-text {
-  margin-top: 15px;
+  margin-top: 20px;
   font-size: 16px;
-  font-weight: bold;
-  color: #333;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
+  font-weight: 800;
+  color: #001a2d;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 </style>

@@ -6,12 +6,8 @@ const {
   verifyToken,
   isAdminOrStaff,
 } = require("../middlewares/auth.middleware");
-
-//Ai cũng xem được danh sách thương hiệu
 router.get("/", brandController.findAll);
 router.get("/:id", brandController.findOne);
-
-//Chỉ Admin/Staff mới được Thêm, Sửa, Xóa thương hiệu
 router.post(
   "/",
   verifyToken,

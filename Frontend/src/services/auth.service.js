@@ -5,8 +5,16 @@ class AuthService {
     return (await api.post("/auth/login", data)).data;
   }
 
-  async register(data) {
-    return (await api.post("/auth/register", data)).data;
+  async sendOtp(data) {
+    return (await api.post("/auth/send-otp", data)).data;
+  }
+
+  async registerWithOtp(data) {
+    return (await api.post("/auth/register-with-otp", data)).data;
+  }
+
+  async checkExists(data) {
+    return (await api.post("/auth/check-exists", data)).data;
   }
 
   logout() {
@@ -14,7 +22,6 @@ class AuthService {
     localStorage.removeItem("user");
   }
 
-  // Hàm kiểm tra quyền Admin
   isAdmin() {
     const user = JSON.parse(localStorage.getItem("user"));
     return user && (user.role === "admin" || user.role === "staff");

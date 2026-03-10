@@ -1,6 +1,27 @@
 <template>
   <div class="home-content">
     <section class="text-center pt-10 pb-16 bg-white">
+      <section class="banner-section bg-white pt-6 pb-2">
+        <v-container class="pa-0">
+          <div class="clearfix rounded-lg overflow-hidden elevation-2">
+            <router-link
+              to="/products?tag=seagames"
+              class="a_tow_slide"
+              title="Bộ sưu tập Rise Beyond"
+            >
+              <picture>
+                <img
+                  width="1920"
+                  height="auto"
+                  src="../assets/banner.jpg"
+                  alt="Bộ sưu tập Rise Beyond"
+                  class="img-responsive center-block w-100 d-block"
+                />
+              </picture>
+            </router-link>
+          </div>
+        </v-container>
+      </section>
       <v-container>
         <h1
           class="text-h3 md:text-h2 font-weight-black text-black mb-4 text-uppercase"
@@ -141,8 +162,6 @@ import { ref, onMounted } from "vue";
 import ProductService from "@/services/product.service";
 import ProductCard from "@/components/ProductCard.vue";
 import ProductSlider from "@/components/ProductSlider.vue";
-// XÓA 2 dòng import Header, Footer
-
 const isLoading = ref(false);
 const featuredProducts = ref([]);
 const isLoggedIn = ref(false);

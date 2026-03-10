@@ -10,7 +10,6 @@ class OrderService {
   async updateStatus(id, data) {
     return (await api.put(`/orders/${id}/status`, data)).data;
   }
-  // Dành cho Client sau này
   async getByUser(userId) {
     return (await api.get(`/orders/user/${userId}`)).data;
   }

@@ -1,12 +1,15 @@
 const db = require("../utils/mysql.db");
+const generateId = require("../utils/generate.id");
 
 const Voucher = {
   create: async (data) => {
+    const id = generateId();
     const [result] = await db.query(
       `INSERT INTO vouchers 
-      (code, discount_type, discount_value, min_order_value, max_discount, usage_limit, start_date, end_date) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, code, discount_type, discount_value, min_order_value, max_discount, usage_limit, start_date, end_date) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        id,
         data.code,
         data.discount_type,
         data.discount_value,
@@ -17,7 +20,7 @@ const Voucher = {
         data.end_date,
       ],
     );
-    return result.insertId;
+    return id;
   },
 
   getAll: async () => {

@@ -1,318 +1,456 @@
 <template>
-  <div class="category-manager">
-    <Loading :visible="isLoading" text="Đang xử lý dữ liệu..." />
-
-    <div class="header-actions">
-      <h2>Quản lý Danh mục sản phẩm</h2>
-      <button @click="openModal()" class="btn btn-add">
-        Thêm Danh Mục Mới
-      </button>
+  <v-container
+    fluid
+    theme="light"
+    class="fill-height d-flex flex-column align-start pa-6"
+    style="background-color: #f4f6f8; min-height: 100vh"
+  >
+    <div class="d-flex justify-space-between align-center w-100 mb-6">
+      <div>
+        <h2
+          class="text-h5 font-weight-bold text-indigo-darken-4"
+          style="line-height: 1.2"
+        >
+          Quản lý Danh mục
+        </h2>
+        <span class="text-caption text-indigo-darken-4">
+          Tổ chức và phân loại hệ thống sản phẩm
+        </span>
+      </div>
+      <v-btn
+        color="indigo-darken-4"
+        prepend-icon="mdi-plus"
+        rounded="lg"
+        elevation="0"
+        class="text-capitalize font-weight-semibold"
+        @click="openDialog()"
+      >
+        Thêm Danh Mục
+      </v-btn>
     </div>
 
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>STT</th>
-          <th>Tên Danh Mục</th>
-          <th>Danh Mục Cha</th>
-          <th>Ngày Tạo</th>
-          <th>Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(category, index) in categories" :key="category.id">
-          <td>{{ index + 1 }}</td>
-          <td>{{ category.name }}</td>
-          <td>
-            <span v-if="category.parent_id" class="badge-parent">
-              {{ getParentName(category.parent_id) }}
-            </span>
-            <span v-else class="text-muted">Danh mục gốc</span>
-          </td>
-          <td>
-            {{ new Date(category.created_at).toLocaleDateString("vi-VN") }}
-          </td>
-          <td>
-            <button @click="openModal(category)" class="btn btn-edit">
+    <v-card
+      color="white"
+      width="100%"
+      elevation="0"
+      rounded="xl"
+      class="pa-4"
+      style="
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        box-shadow: 0 4px 24px rgba(99, 102, 241, 0.08);
+      "
+    >
+      <div class="d-flex align-center gap-3 mb-4 px-2">
+        <v-text-field
+          v-model="search"
+          density="compact"
+          variant="outlined"
+          placeholder="Tìm theo tên hoặc môn thể thao (VD: Cầu lông)..."
+          prepend-inner-icon="mdi-magnify"
+          hide-details
+          clearable
+          rounded="lg"
+          color="indigo-darken-3"
+          style="max-width: 400px"
+        />
+        <v-spacer />
+        <v-chip
+          color="indigo-lighten-4"
+          text-color="indigo-darken-4"
+          size="small"
+          variant="flat"
+          prepend-icon="mdi-format-list-bulleted"
+        >
+          {{ categories.length }} danh mục
+        </v-chip>
+      </div>
+
+      <v-divider class="mb-2" />
+
+      <v-data-table
+        :headers="headers"
+        :items="categories"
+        :loading="loading"
+        :search="search"
+        :custom-filter="customFilter"
+        hover
+        class="bg-white rounded-lg"
+        loading-text="Đang tải dữ liệu..."
+        no-data-text="Không có danh mục nào"
+      >
+        <template v-slot:loading>
+          <v-skeleton-loader type="table-row@6" />
+        </template>
+
+        <template v-slot:item.parent_id="{ item }">
+          <v-chip
+            size="small"
+            variant="tonal"
+            :color="item.parent_id ? 'indigo-darken-1' : 'grey-darken-1'"
+            class="font-weight-medium"
+          >
+            {{ getParentName(item.parent_id) }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.sport_id="{ item }">
+          <v-chip
+            size="small"
+            variant="flat"
+            :color="item.sport_id ? 'teal-darken-1' : 'grey-lighten-2'"
+            :text-color="item.sport_id ? 'white' : 'grey-darken-2'"
+          >
+            {{ getSportName(item.sport_id) }}
+          </v-chip>
+        </template>
+
+        <template v-slot:item.actions="{ item }">
+          <div class="d-flex justify-center gap-2">
+            <v-btn
+              color="amber-darken-2"
+              size="small"
+              rounded="lg"
+              prepend-icon="mdi-pencil"
+              variant="tonal"
+              class="text-capitalize"
+              @click="openDialog(item)"
+            >
               Sửa
-            </button>
-            <button @click="handleDelete(category.id)" class="btn btn-delete">
+            </v-btn>
+            <v-btn
+              color="red-darken-1"
+              size="small"
+              rounded="lg"
+              prepend-icon="mdi-delete"
+              variant="tonal"
+              class="text-capitalize"
+              @click="confirmDelete(item)"
+            >
               Xóa
-            </button>
-          </td>
-        </tr>
-        <tr v-if="categories.length === 0">
-          <td colspan="5" class="text-center">Chưa có danh mục nào.</td>
-        </tr>
-      </tbody>
-    </table>
+            </v-btn>
+          </div>
+        </template>
+      </v-data-table>
+    </v-card>
 
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal-content">
-        <h3>{{ isEditMode ? "Cập nhật Danh Mục" : "Thêm Danh Mục Mới" }}</h3>
-
-        <div class="form-group">
-          <label>Tên danh mục</label>
-          <input
-            v-model="formData.name"
-            type="text"
-            placeholder="Nhập tên danh mục..."
-            class="input-text"
-            @keyup.enter="handleSave"
+    <v-dialog v-model="dialog" max-width="500px" persistent scrollable>
+      <v-card rounded="xl" elevation="8" theme="light" color="white">
+        <div
+          class="d-flex align-center justify-space-between px-6 py-4"
+          style="background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%)"
+        >
+          <div class="d-flex align-center gap-3">
+            <v-icon color="white" size="22">
+              {{ isEditing ? "mdi-pencil-circle" : "mdi-plus-circle" }}
+            </v-icon>
+            <span class="text-body-1 font-weight-bold text-white">
+              {{ isEditing ? "Cập nhật Danh mục" : "Thêm Danh mục mới" }}
+            </span>
+          </div>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            color="white"
+            size="small"
+            @click="closeDialog"
+            :disabled="saving"
           />
         </div>
 
-        <div class="form-group">
-          <label>Danh mục cha</label>
-          <select v-model="formData.parent_id" class="input-text">
-            <option :value="null">-- Không có (Danh mục gốc) --</option>
-            <option
-              v-for="cat in availableParentCategories"
-              :key="cat.id"
-              :value="cat.id"
+        <v-card-text class="px-6 py-5 bg-white">
+          <v-form ref="formRef" @submit.prevent="save">
+            <v-text-field
+              v-model="editedItem.name"
+              label="Tên danh mục"
+              placeholder="Nhập tên danh mục..."
+              variant="outlined"
+              density="comfortable"
+              color="indigo-darken-3"
+              rounded="lg"
+              class="mb-4"
+              prepend-inner-icon="mdi-tag-outline"
+              :rules="[(v) => !!v?.trim() || 'Tên danh mục là bắt buộc']"
+              required
             >
-              {{ cat.name }}
-            </option>
-          </select>
-        </div>
+              <template v-slot:label>
+                Tên danh mục <span class="text-red ml-1">*</span>
+              </template>
+            </v-text-field>
 
-        <div class="modal-actions">
-          <button
-            @click="handleSave"
-            class="btn btn-save"
-            :disabled="isLoading"
+            <v-autocomplete
+              v-model="editedItem.parent_id"
+              :items="parentCategoryOptions"
+              item-title="displayPath"
+              item-value="id"
+              label="Danh mục cha"
+              placeholder="Để trống nếu là danh mục gốc"
+              variant="outlined"
+              density="comfortable"
+              color="indigo-darken-3"
+              rounded="lg"
+              class="mb-4"
+              prepend-inner-icon="mdi-folder-open-outline"
+              no-data-text="Không tìm thấy danh mục"
+              auto-select-first
+              clearable
+            />
+
+            <v-autocomplete
+              v-model="editedItem.sport_id"
+              :items="sports"
+              item-title="name"
+              item-value="id"
+              :label="editedItem.sport_id ? '' : 'Không thuộc môn nào'"
+              variant="outlined"
+              density="comfortable"
+              color="indigo-darken-3"
+              rounded="lg"
+              prepend-inner-icon="mdi-trophy-outline"
+              hide-details
+              no-data-text="Không tìm thấy môn thể thao"
+              auto-select-first
+              clearable
+              @click:clear="editedItem.sport_id = null"
+            />
+          </v-form>
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions class="px-6 py-4 bg-white">
+          <v-spacer />
+          <v-btn
+            color="grey-darken-1"
+            variant="tonal"
+            rounded="lg"
+            min-width="110"
+            class="text-capitalize mr-2"
+            @click="closeDialog"
+            :disabled="saving"
           >
-            {{ isLoading ? "Đang lưu..." : "Lưu lại" }}
-          </button>
-          <button
-            @click="closeModal"
-            class="btn btn-cancel"
-            :disabled="isLoading"
+            <v-icon start>mdi-close</v-icon>Hủy bỏ
+          </v-btn>
+          <v-btn
+            color="indigo-darken-4"
+            variant="elevated"
+            rounded="lg"
+            min-width="140"
+            class="text-capitalize"
+            :loading="saving"
+            @click="save"
           >
-            Hủy bỏ
-          </button>
-        </div>
+            <v-icon start>mdi-content-save</v-icon>Lưu lại
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <ConfirmDialog ref="confirmDialogRef" />
+
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      timeout="3000"
+      location="top right"
+      rounded="lg"
+      elevation="4"
+    >
+      <div class="d-flex align-center gap-2">
+        <v-icon size="18">
+          {{
+            snackbar.color === "success"
+              ? "mdi-check-circle"
+              : "mdi-alert-circle"
+          }}
+        </v-icon>
+        {{ snackbar.text }}
       </div>
-    </div>
-  </div>
+    </v-snackbar>
+  </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue"; // Nhớ import thêm computed
-import CategoryService from "@/services/category.service";
-import Loading from "@/components/Loading.vue";
+import { ref, onMounted, computed } from "vue";
+import CategoryService from "@/services/category.service.js";
+import SportService from "@/services/sport.service.js";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
+
+const loading = ref(false);
+const saving = ref(false);
+const dialog = ref(false);
+const search = ref("");
+const formRef = ref(null);
+const confirmDialogRef = ref(null);
 
 const categories = ref([]);
+const sports = ref([]);
+const snackbar = ref({ show: false, text: "", color: "success" });
 
-// State cho Modal và Loading
-const showModal = ref(false);
-const isEditMode = ref(false);
-const isLoading = ref(false);
-// Cập nhật formData để có thêm parent_id
-const formData = ref({ id: null, name: "", parent_id: null });
+const headers = [
+  { title: "ID", key: "id", width: "80px", align: "center" },
+  { title: "Tên danh mục", key: "name", align: "center" },
+  { title: "Danh mục cha", key: "parent_id", align: "center" },
+  { title: "Môn thể thao", key: "sport_id", align: "center" },
+  { title: "Thao tác", key: "actions", sortable: false, align: "center" },
+];
 
-// Computed property để lọc danh sách danh mục cha
-// Tránh việc một danh mục chọn chính nó làm cha khi cập nhật
-const availableParentCategories = computed(() => {
-  if (!isEditMode.value) return categories.value;
-  return categories.value.filter((cat) => cat.id !== formData.value.id);
+const defaultItem = { id: null, name: "", parent_id: null, sport_id: null };
+const editedItem = ref({ ...defaultItem });
+
+const isEditing = computed(() => !!editedItem.value.id);
+
+const parentCategoryOptions = computed(() => {
+  return categories.value
+    .filter((c) => c.id !== editedItem.value.id)
+    .map((c) => {
+      const parentName = getParentName(c.parent_id);
+      return {
+        ...c,
+        displayPath:
+          c.parent_id && parentName !== "Trống (Gốc)"
+            ? `${parentName} \\ ${c.name}`
+            : c.name,
+      };
+    })
+    .sort((a, b) => a.displayPath.localeCompare(b.displayPath));
 });
 
-// Hàm lấy tên danh mục cha dựa vào id để hiển thị trên bảng
+const customFilter = (value, query, item) => {
+  if (!query) return true;
+
+  const searchText = query.toString().toLowerCase();
+  const categoryName = item.raw.name?.toLowerCase() || "";
+  const sportName = getSportName(item.raw.sport_id).toLowerCase();
+  const parentName = getParentName(item.raw.parent_id).toLowerCase();
+
+  return (
+    categoryName.includes(searchText) ||
+    sportName.includes(searchText) ||
+    parentName.includes(searchText)
+  );
+};
+
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const [catData, sportData] = await Promise.all([
+      CategoryService.getAll(),
+      SportService.getAll(),
+    ]);
+    categories.value = catData;
+    sports.value = sportData;
+  } catch (error) {
+    showMessage("Lỗi khi tải dữ liệu", "error");
+  } finally {
+    loading.value = false;
+  }
+};
+
 const getParentName = (parentId) => {
+  if (!parentId) return "Trống (Gốc)";
   const parent = categories.value.find((c) => c.id === parentId);
-  return parent ? parent.name : "Không xác định";
+  return parent ? parent.name : "Không rõ";
 };
 
-// Gọi API lấy danh sách
-const fetchCategories = async () => {
-  isLoading.value = true;
-  try {
-    categories.value = await CategoryService.getAll();
-  } catch (error) {
-    console.error("Lỗi khi tải danh mục", error);
-  } finally {
-    isLoading.value = false;
-  }
+const getSportName = (sportId) => {
+  if (!sportId) return "Dùng chung";
+  const sport = sports.value.find((s) => s.id === sportId);
+  return sport ? sport.name : "Không rõ";
 };
 
-// Xóa danh mục
-const handleDelete = async (id) => {
-  if (!confirm("Bạn có chắc chắn muốn xóa danh mục này?")) return;
-  isLoading.value = true;
-  try {
-    await CategoryService.delete(id);
-    await fetchCategories();
-  } catch (error) {
-    alert(
-      "Không thể xóa danh mục này (Có thể do đang có sản phẩm thuộc danh mục hoặc đang làm cha của danh mục khác)",
-    );
-  } finally {
-    isLoading.value = false;
-  }
+const openDialog = (item = null) => {
+  editedItem.value = item ? { ...item } : { ...defaultItem };
+  dialog.value = true;
 };
 
-// Mở Modal
-const openModal = (category = null) => {
-  if (category) {
-    isEditMode.value = true;
-    formData.value = { ...category };
-  } else {
-    isEditMode.value = false;
-    formData.value = { id: null, name: "", parent_id: null };
-  }
-  showModal.value = true;
+const closeDialog = () => {
+  dialog.value = false;
+  setTimeout(() => {
+    editedItem.value = { ...defaultItem };
+    formRef.value?.resetValidation();
+  }, 300);
 };
 
-// Đóng Modal
-const closeModal = () => {
-  showModal.value = false;
-  formData.value = { id: null, name: "", parent_id: null };
-};
+const save = async () => {
+  const { valid } = await formRef.value?.validate();
+  if (!valid) return;
 
-// Lưu dữ liệu
-const handleSave = async () => {
-  if (!formData.value.name.trim()) {
-    return alert("Tên danh mục không được để trống");
-  }
-
-  isLoading.value = true;
+  saving.value = true;
   try {
     const payload = {
-      name: formData.value.name,
-      parent_id: formData.value.parent_id, // Gửi thêm parent_id lên server
+      name: editedItem.value.name.trim(),
+      parent_id: editedItem.value.parent_id || null,
+      sport_id: editedItem.value.sport_id || null,
     };
 
-    if (isEditMode.value) {
-      await CategoryService.update(formData.value.id, payload);
+    if (isEditing.value) {
+      await CategoryService.update(editedItem.value.id, payload);
+      showMessage("Cập nhật danh mục thành công");
     } else {
       await CategoryService.create(payload);
+      showMessage("Thêm danh mục thành công");
     }
-
-    closeModal();
-    await fetchCategories();
+    await loadData();
+    closeDialog();
   } catch (error) {
-    alert(error.response?.data?.message || "Lỗi khi lưu dữ liệu");
+    showMessage(error.response?.data?.message || "Có lỗi xảy ra", "error");
   } finally {
-    isLoading.value = false;
+    saving.value = false;
   }
+};
+
+const confirmDelete = async (item) => {
+  const isConfirmed = await confirmDialogRef.value.open(
+    "Xóa Danh Mục",
+    `Bạn có chắc chắn muốn xóa danh mục "${item.name}"? Các danh mục con hoặc sản phẩm thuộc danh mục này có thể bị ảnh hưởng.`,
+  );
+
+  if (isConfirmed) {
+    try {
+      await CategoryService.delete(item.id);
+      showMessage("Đã xóa danh mục thành công");
+      await loadData();
+    } catch (error) {
+      showMessage("Không thể xóa danh mục này", "error");
+    }
+  }
+};
+
+const showMessage = (text, color = "success") => {
+  snackbar.value = { show: true, text, color };
 };
 
 onMounted(() => {
-  fetchCategories();
+  loadData();
 });
 </script>
 
 <style scoped>
-/* Giữ nguyên CSS cũ của bạn và thêm một chút CSS cho nhãn cha */
-.category-manager {
-  max-width: 900px;
+:deep(.v-data-table th.v-data-table__th) {
+  background: linear-gradient(90deg, #e8eaf6 0%, #f3f4f6 100%) !important;
+  color: #283593 !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  letter-spacing: 0.02em;
 }
 
-.header-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+:deep(.v-data-table th.v-data-table__th:hover),
+:deep(.v-data-table th.v-data-table__th:hover .v-data-table-header__sort-icon) {
+  color: #1a237e !important;
 }
 
-.input-text {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-  margin-top: 5px;
+:deep(.v-data-table td) {
+  vertical-align: middle;
 }
 
-.btn {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  color: white;
-  margin-right: 5px;
-}
-.btn-add {
-  background-color: #28a745;
-}
-.btn-edit {
-  background-color: #ffc107;
-  color: #000;
-}
-.btn-delete {
-  background-color: #dc3545;
-}
-.btn-save {
-  background-color: #007bff;
-}
-.btn-cancel {
-  background-color: #6c757d;
+:deep(.v-data-table__tr:hover td) {
+  background-color: rgba(232, 234, 246, 0.4) !important;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
+.gap-2 {
+  gap: 8px;
 }
-.data-table th,
-.data-table td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  text-align: left;
-}
-.data-table th {
-  background-color: #f4f6f9;
-}
-.text-center {
-  text-align: center;
-}
-
-/* Thêm css cho text Danh mục */
-.text-muted {
-  color: #6c757d;
-  font-style: italic;
-  font-size: 0.9em;
-}
-.badge-parent {
-  background-color: #e9ecef;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.9em;
-  color: #495057;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background-color: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-.form-group {
-  margin-bottom: 20px;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+.gap-3 {
+  gap: 12px;
 }
 </style>

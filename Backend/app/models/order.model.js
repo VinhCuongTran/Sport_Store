@@ -1,18 +1,19 @@
 const db = require("../utils/mysql.db");
+const generateId = require("../utils/generate.id");
 
 const Order = {
-  // Tạo đơn hàng mới
   create: async (orderData, items) => {
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
 
-      // 1. Thêm dữ liệu vào bảng orders
-      const [orderResult] = await connection.query(
+      const orderId = generateId();
+      await connection.query(
         `INSERT INTO orders 
-        (user_id, voucher_id, subtotal, discount_amount, total_price, receiver_name, phone_number, shipping_address, payment_method, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        (id, user_id, voucher_id, subtotal, discount_amount, total_price, receiver_name, phone_number, shipping_address, payment_method, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
+          orderId,
           orderData.user_id,
           orderData.voucher_id || null,
           orderData.subtotal,
@@ -24,11 +25,10 @@ const Order = {
           orderData.payment_method || "Cash",
         ],
       );
-      const orderId = orderResult.insertId;
 
-      // 2. Thêm dữ liệu vào bảng order_items
       if (items && items.length > 0) {
         const orderItemsData = items.map((item) => [
+          generateId(),
           orderId,
           item.product_id,
           item.variant_id,
@@ -37,11 +37,10 @@ const Order = {
         ]);
 
         await connection.query(
-          `INSERT INTO order_items (order_id, product_id, variant_id, quantity, price) VALUES ?`,
+          `INSERT INTO order_items (id, order_id, product_id, variant_id, quantity, price) VALUES ?`,
           [orderItemsData],
         );
 
-        // 3. Trừ số lượng tồn kho (stock) trong bảng product_variants
         for (const item of items) {
           if (item.variant_id) {
             await connection.query(
@@ -51,7 +50,12 @@ const Order = {
           }
         }
       }
-
+      if (orderData.voucher_id) {
+        await connection.query(
+          `UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?`,
+          [orderData.voucher_id],
+        );
+      }
       await connection.commit();
       return orderId;
     } catch (error) {
@@ -73,7 +77,6 @@ const Order = {
     return rows;
   },
 
-  // Lấy danh sách đơn hàng của một user
   getByUserId: async (userId) => {
     const [rows] = await db.query(
       `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC`,
@@ -82,12 +85,10 @@ const Order = {
     return rows;
   },
 
-  // Lấy chi tiết 1 đơn hàng cụ thể
   getById: async (id) => {
     const [orders] = await db.query(`SELECT * FROM orders WHERE id = ?`, [id]);
     if (orders.length === 0) return null;
 
-    // Lấy kèm theo danh sách sản phẩm của đơn hàng đó
     const [items] = await db.query(
       `SELECT oi.*, p.name as product_name, pv.size, pv.color 
        FROM order_items oi
@@ -100,7 +101,6 @@ const Order = {
     return { ...orders[0], items };
   },
 
-  // Cập nhật trạng thái đơn hàng (Dành cho Admin/Staff)
   updateStatus: async (id, status, payment_status, staffId = null) => {
     const [result] = await db.query(
       `UPDATE orders 

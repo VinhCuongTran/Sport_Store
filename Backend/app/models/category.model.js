@@ -1,12 +1,14 @@
 const db = require("../utils/mysql.db");
+const generateId = require("../utils/generate.id");
 
 const Category = {
   create: async (data) => {
+    const id = generateId();
     const [result] = await db.query(
-      "INSERT INTO categories (name, parent_id) VALUES (?, ?)",
-      [data.name, data.parent_id || null],
+      "INSERT INTO categories (id, name, parent_id, sport_id) VALUES (?, ?, ?, ?)",
+      [id, data.name, data.parent_id || null, data.sport_id || null],
     );
-    return result.insertId;
+    return id;
   },
   getAll: async () => {
     const [rows] = await db.query("SELECT * FROM categories");
@@ -20,8 +22,8 @@ const Category = {
   },
   update: async (id, data) => {
     const [result] = await db.query(
-      "UPDATE categories SET name = ?, parent_id = ? WHERE id = ?",
-      [data.name, data.parent_id || null, id],
+      "UPDATE categories SET name = ?, parent_id = ?, sport_id = ? WHERE id = ?",
+      [data.name, data.parent_id || null, data.sport_id || null, id],
     );
     return result.affectedRows > 0;
   },

@@ -1,34 +1,169 @@
 <template>
-    <div class="admin-layout">
-        <AdminHeader />
-        <div class="admin-container">
-            <aside class="sidebar">
-                <nav>
-                    <router-link :to="{ name: 'admin-stats' }" class="nav-link">Thống kê</router-link>
-                    <router-link :to="{ name: 'admin-category' }" class="nav-link">Quản lý Danh mục</router-link>
-                    <router-link :to="{ name: 'admin-brand' }" class="nav-link">Quản lý Thương hiệu</router-link>
-                    <router-link :to="{ name: 'admin-user' }" class="nav-link">Quản lý Người dùng</router-link>
-                    <router-link :to="{ name: 'admin-product' }" class="nav-link">Quản lý Sản phẩm</router-link>
-                    <router-link :to="{ name: 'admin-voucher' }" class="nav-link">Quản lý Voucher</router-link>
-                    <router-link :to="{ name: 'admin-review' }" class="nav-link">Quản lý Đánh giá</router-link>
-                    <router-link :to="{ name: 'admin-order' }" class="nav-link">Quản lý Đơn hàng</router-link>
-                    </nav>
-            </aside>
-            <main class="content">
-                <router-view /> </main>
-        </div>
-    </div>
+  <v-app>
+    <AdminHeader @toggle-drawer="drawer = !drawer" />
+
+    <v-navigation-drawer
+      v-model="drawer"
+      color="indigo-darken-4"
+      elevation="6"
+      expand-on-hover
+      rail-variant
+      style="border-right: none"
+    >
+      <div
+        class="d-flex align-center justify-center py-4 px-3"
+        style="border-bottom: 1px solid rgba(255, 255, 255, 0.1)"
+      >
+        <v-icon color="indigo-lighten-4" size="28">mdi-shield-crown</v-icon>
+      </div>
+
+      <v-list density="compact" nav class="pa-2 mt-1">
+        <v-list-subheader
+          class="text-uppercase font-weight-bold text-indigo-lighten-3 text-caption"
+          style="letter-spacing: 1px"
+        >
+          Menu Quản Trị
+        </v-list-subheader>
+
+        <v-list-item
+          prepend-icon="mdi-chart-line"
+          title="Thống kê"
+          :to="{ name: 'admin-stats' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-shape"
+          title="Quản lý Danh mục"
+          :to="{ name: 'admin-category' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-run-fast"
+          title="Quản lý Môn thể thao"
+          :to="{ name: 'admin-sport' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-tag-multiple"
+          title="Quản lý Thương hiệu"
+          :to="{ name: 'admin-brand' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-account-group"
+          title="Quản lý Người dùng"
+          :to="{ name: 'admin-user' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-shoe-sneaker"
+          title="Quản lý Sản phẩm"
+          :to="{ name: 'admin-product' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-ticket-percent"
+          title="Quản lý Voucher"
+          :to="{ name: 'admin-voucher' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-star-circle"
+          title="Quản lý Đánh giá"
+          :to="{ name: 'admin-review' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-cart"
+          title="Quản lý Đơn hàng"
+          :to="{ name: 'admin-order' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
+    <v-main
+      style="
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8eaf6 100%);
+        min-height: 100vh;
+      "
+    >
+      <v-container fluid class="pa-6">
+        <router-view />
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
 <script setup>
-import AdminHeader from './AdminHeader.vue';
+import { ref } from "vue";
+import AdminHeader from "./AdminHeader.vue";
+
+const drawer = ref(true);
 </script>
 
 <style scoped>
-.admin-layout { display: flex; flex-direction: column; min-height: 100vh; }
-.admin-container { display: flex; flex: 1; }
-.sidebar { width: 250px; background-color: #f4f6f9; padding: 20px 0; border-right: 1px solid #ddd; }
-.nav-link { display: block; padding: 12px 20px; color: #333; text-decoration: none; border-bottom: 1px solid #eee; }
-.nav-link:hover, .router-link-active { background-color: #e2e6ea; font-weight: bold; color: #007bff; }
-.content { flex: 1; padding: 30px; background-color: #fff; overflow-y: auto; }
+.nav-item {
+  transition:
+    background 0.2s,
+    transform 0.15s;
+}
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: translateX(2px);
+}
+.nav-item.v-list-item--active {
+  background: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+:deep(.v-list-item__prepend .v-icon) {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+:deep(.v-list-item--active .v-list-item__prepend .v-icon) {
+  color: #fff !important;
+}
+:deep(.v-list-item-title) {
+  color: rgba(255, 255, 255, 0.85) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+}
+:deep(.v-list-item--active .v-list-item-title) {
+  color: #fff !important;
+  font-weight: 600 !important;
+}
 </style>

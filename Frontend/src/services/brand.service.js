@@ -10,7 +10,6 @@ class BrandService {
   }
 
   async create(data) {
-    // data ở đây là một đối tượng FormData
     return (
       await api.post("/brands", data, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -19,7 +18,6 @@ class BrandService {
   }
 
   async update(id, data) {
-    // data ở đây là một đối tượng FormData
     return (
       await api.put(`/brands/${id}`, data, {
         headers: { "Content-Type": "multipart/form-data" },

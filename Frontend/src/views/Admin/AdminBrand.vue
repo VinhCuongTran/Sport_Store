@@ -1,329 +1,437 @@
 <template>
-  <div class="brand-manager">
-    <Loading :visible="isLoading" text="Đang xử lý dữ liệu..." />
-
-    <div class="header-actions">
-      <h2>Quản lý Thương hiệu</h2>
-      <button @click="openModal()" class="btn btn-add">
-        Thêm Thương Hiệu Mới
-      </button>
+  <v-container
+    fluid
+    theme="light"
+    class="fill-height d-flex flex-column align-start pa-6"
+    style="background-color: #f4f6f8; min-height: 100vh"
+  >
+    <div class="d-flex justify-space-between align-center w-100 mb-6">
+      <div>
+        <h2
+          class="text-h5 font-weight-bold text-indigo-darken-4"
+          style="line-height: 1.2"
+        >
+          Quản lý Thương hiệu
+        </h2>
+        <span class="text-caption text-indigo-darken-4"
+          >Danh sách và thông tin các thương hiệu</span
+        >
+      </div>
+      <v-btn
+        color="indigo-darken-4"
+        prepend-icon="mdi-plus"
+        rounded="lg"
+        elevation="0"
+        class="text-capitalize font-weight-semibold"
+        @click="openDialog()"
+      >
+        Thêm Thương Hiệu
+      </v-btn>
     </div>
 
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>STT</th>
-          <th>Logo</th>
-          <th>Tên Thương Hiệu</th>
-          <th>Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(brand, index) in brands" :key="brand.id">
-          <td>{{ index + 1 }}</td>
-          <td>
-            <img
-              v-if="brand.logo_url"
-              :src="getImageUrl(brand.logo_url)"
-              alt="Logo"
-              class="brand-logo"
-            />
-            <span v-else>Không có ảnh</span>
-          </td>
-          <td>{{ brand.name }}</td>
-          <td>
-            <button @click="openModal(brand)" class="btn btn-edit">Sửa</button>
-            <button @click="handleDelete(brand.id)" class="btn btn-delete">
-              Xóa
-            </button>
-          </td>
-        </tr>
-        <tr v-if="brands.length === 0">
-          <td colspan="4" class="text-center">Chưa có thương hiệu nào.</td>
-        </tr>
-      </tbody>
-    </table>
+    <v-card
+      color="white"
+      width="100%"
+      elevation="0"
+      rounded="xl"
+      class="pa-4"
+      style="
+        border: 1px solid rgba(99, 102, 241, 0.15);
+        box-shadow: 0 4px 24px rgba(99, 102, 241, 0.1);
+      "
+    >
+      <div class="d-flex align-center gap-3 mb-4 px-2">
+        <v-text-field
+          v-model="search"
+          density="compact"
+          variant="outlined"
+          placeholder="Tìm kiếm thương hiệu..."
+          prepend-inner-icon="mdi-magnify"
+          hide-details
+          clearable
+          rounded="lg"
+          color="indigo-darken-3"
+          style="max-width: 320px"
+        />
+        <v-spacer />
+        <v-chip
+          color="indigo-lighten-4"
+          text-color="indigo-darken-4"
+          size="small"
+          variant="flat"
+          prepend-icon="mdi-format-list-bulleted"
+        >
+          {{ brands.length }} thương hiệu
+        </v-chip>
+      </div>
 
-    <div v-if="showModal" class="modal-overlay">
-      <div class="modal-content">
-        <h3>
-          {{ isEditMode ? "Cập nhật Thương Hiệu" : "Thêm Thương Hiệu Mới" }}
-        </h3>
+      <v-divider class="mb-2" />
 
-        <form @submit.prevent="handleSave">
-          <div class="form-group">
-            <label>Tên thương hiệu</label>
-            <input
-              v-model="formData.name"
-              type="text"
-              placeholder="Nhập tên thương hiệu..."
-              class="input-text"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label>Logo thương hiệu</label>
-            <input
-              type="file"
-              @change="handleFileChange"
-              accept="image/*"
-              class="input-text"
-            />
-            <div v-if="previewImage" class="preview-container">
-              <img :src="previewImage" alt="Preview" class="preview-img" />
-            </div>
+      <v-data-table
+        :headers="headers"
+        :items="brands"
+        :loading="loading"
+        :search="search"
+        hover
+        class="bg-white rounded-lg"
+        no-data-text="Chưa có thương hiệu nào"
+      >
+        <template v-slot:item.logo_url="{ item }">
+          <div class="d-flex justify-center align-center my-2">
             <div
-              v-else-if="formData.logo_url && isEditMode"
-              class="preview-container"
+              style="
+                width: 80px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 4px;
+              "
+              class="bg-grey-lighten-4 rounded-lg border"
             >
-              <img
-                :src="getImageUrl(formData.logo_url)"
-                alt="Current Logo"
-                class="preview-img"
+              <v-img
+                v-if="item.logo_url"
+                :src="item.logo_url"
+                max-height="100%"
+                max-width="100%"
+              ></v-img>
+              <v-icon v-else color="grey-lighten-1"
+                >mdi-image-off-outline</v-icon
+              >
+            </div>
+          </div>
+        </template>
+
+        <template v-slot:item.actions="{ item }">
+          <div class="d-flex justify-center gap-2">
+            <v-btn
+              color="amber-darken-2"
+              size="small"
+              rounded="lg"
+              prepend-icon="mdi-pencil"
+              variant="tonal"
+              class="text-capitalize"
+              @click="openDialog(item)"
+            >
+              Sửa
+            </v-btn>
+            <v-btn
+              color="red-darken-1"
+              size="small"
+              rounded="lg"
+              prepend-icon="mdi-delete"
+              variant="tonal"
+              class="text-capitalize"
+              @click="confirmDelete(item)"
+            >
+              Xóa
+            </v-btn>
+          </div>
+        </template>
+      </v-data-table>
+    </v-card>
+
+    <v-dialog v-model="dialog" max-width="500px" persistent scrollable>
+      <v-card rounded="xl" elevation="8" theme="light" color="white">
+        <div
+          class="d-flex align-center justify-space-between px-6 py-4"
+          style="background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%)"
+        >
+          <div class="d-flex align-center gap-3">
+            <v-icon color="white" size="22">
+              {{ isEditing ? "mdi-pencil-circle" : "mdi-plus-circle" }}
+            </v-icon>
+            <span class="text-body-1 font-weight-bold text-white">
+              {{ isEditing ? "Cập nhật Thương hiệu" : "Thêm Thương hiệu mới" }}
+            </span>
+          </div>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            color="white"
+            size="small"
+            @click="closeDialog"
+            :disabled="saving"
+          ></v-btn>
+        </div>
+
+        <v-card-text class="px-6 py-5 bg-white">
+          <form @submit.prevent="save">
+            <div class="mb-4">
+              <label
+                class="text-caption font-weight-bold text-indigo-darken-3 mb-1 d-block"
+              >
+                Tên thương hiệu <span class="text-red">*</span>
+              </label>
+              <input
+                v-model="editedItem.name"
+                type="text"
+                class="custom-input text-black"
+                required
+                placeholder="Nhập tên thương hiệu..."
               />
             </div>
-          </div>
 
-          <div class="modal-actions">
-            <button type="submit" class="btn btn-save" :disabled="isLoading">
-              Lưu lại
-            </button>
-            <button
-              type="button"
-              @click="closeModal"
-              class="btn btn-cancel"
-              :disabled="isLoading"
-            >
-              Hủy bỏ
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
+            <div class="mb-2">
+              <label
+                class="text-caption font-weight-bold text-indigo-darken-3 mb-1 d-block"
+              >
+                Logo Thương hiệu
+              </label>
+              <input
+                type="file"
+                @change="handleFileChange"
+                accept="image/*"
+                class="custom-input file-input text-black"
+              />
+              <div
+                v-if="isEditing && editedItem.logo_url && !selectedFile"
+                class="mt-3 d-flex align-center"
+              >
+                <span class="text-caption text-grey-darken-1 mr-3"
+                  >Logo hiện tại:</span
+                >
+                <div
+                  style="
+                    width: 60px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 2px;
+                  "
+                  class="border rounded bg-grey-lighten-4"
+                >
+                  <v-img
+                    :src="editedItem.logo_url"
+                    max-height="100%"
+                    max-width="100%"
+                  ></v-img>
+                </div>
+              </div>
+            </div>
+          </form>
+        </v-card-text>
+
+        <v-divider></v-divider>
+        <v-card-actions class="px-6 py-4 gap-3 bg-white">
+          <v-spacer></v-spacer>
+          <v-btn
+            color="grey-darken-1"
+            variant="tonal"
+            rounded="lg"
+            min-width="110"
+            class="text-capitalize"
+            @click="closeDialog"
+            :disabled="saving"
+          >
+            <v-icon start>mdi-close</v-icon>Hủy bỏ
+          </v-btn>
+          <v-btn
+            color="indigo-darken-4"
+            variant="elevated"
+            rounded="lg"
+            min-width="140"
+            class="text-capitalize"
+            :loading="saving"
+            @click="save"
+          >
+            <v-icon start>mdi-content-save</v-icon>Lưu lại
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <ConfirmDialog ref="confirmDialogRef" />
+
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      timeout="3000"
+      location="top right"
+    >
+      {{ snackbar.text }}
+    </v-snackbar>
+  </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
-import BrandService from "@/services/brand.service";
-import Loading from "@/components/Loading.vue"; // 1. Import component Loading
+import { ref, onMounted, computed } from "vue";
+import BrandService from "@/services/brand.service.js";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
+
+const loading = ref(false);
+const saving = ref(false);
+const dialog = ref(false);
+const search = ref("");
+const confirmDialogRef = ref(null);
 
 const brands = ref([]);
-const showModal = ref(false);
-const isEditMode = ref(false);
-const isLoading = ref(false); // 2. Thêm biến trạng thái Loading
+const snackbar = ref({ show: false, text: "", color: "success" });
 
-const formData = ref({ id: null, name: "", logo_url: "" });
+const headers = [
+  { title: "ID", key: "id", width: "80px", align: "center" },
+  {
+    title: "Logo",
+    key: "logo_url",
+    width: "120px",
+    align: "center",
+    sortable: false,
+  },
+  { title: "Tên thương hiệu", key: "name", align: "center" },
+  {
+    title: "Thao tác",
+    key: "actions",
+    sortable: false,
+    align: "center",
+    width: "200px",
+  },
+];
+
+const defaultItem = { id: null, name: "", logo_url: "" };
+const editedItem = ref({ ...defaultItem });
 const selectedFile = ref(null);
-const previewImage = ref(null);
 
-const getImageUrl = (path) => {
-  return path;
-};
+const isEditing = computed(() => !!editedItem.value.id);
 
-const fetchBrands = async () => {
-  isLoading.value = true; // Bật loading
+const loadData = async () => {
+  loading.value = true;
   try {
     brands.value = await BrandService.getAll();
   } catch (error) {
-    console.error("Lỗi khi tải thương hiệu", error);
+    showMessage("Lỗi khi tải dữ liệu", "error");
   } finally {
-    isLoading.value = false; // Tắt loading
+    loading.value = false;
   }
 };
 
-const handleDelete = async (id) => {
-  if (!confirm("Bạn có chắc chắn muốn xóa thương hiệu này?")) return;
-  isLoading.value = true;
-  try {
-    await BrandService.delete(id);
-    await fetchBrands(); // Chờ fetchBrands chạy xong
-  } catch (error) {
-    alert("Không thể xóa thương hiệu này.");
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const openModal = (brand = null) => {
-  if (brand) {
-    isEditMode.value = true;
-    formData.value = { ...brand };
+const openDialog = (item = null) => {
+  if (item) {
+    editedItem.value = { ...item };
   } else {
-    isEditMode.value = false;
-    formData.value = { id: null, name: "", logo_url: "" };
+    editedItem.value = { ...defaultItem };
   }
   selectedFile.value = null;
-  previewImage.value = null;
-  showModal.value = true;
+  dialog.value = true;
 };
 
-const closeModal = () => {
-  showModal.value = false;
-  selectedFile.value = null;
-  previewImage.value = null;
+const closeDialog = () => {
+  dialog.value = false;
+  setTimeout(() => {
+    editedItem.value = { ...defaultItem };
+    selectedFile.value = null;
+  }, 300);
 };
 
 const handleFileChange = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    selectedFile.value = file;
-    previewImage.value = URL.createObjectURL(file);
+  if (event.target.files.length > 0) {
+    selectedFile.value = event.target.files[0];
   } else {
     selectedFile.value = null;
-    previewImage.value = null;
   }
 };
 
-const handleSave = async () => {
-  isLoading.value = true;
+const save = async () => {
+  if (!editedItem.value.name || !editedItem.value.name.trim()) {
+    showMessage("Tên thương hiệu là bắt buộc", "error");
+    return;
+  }
+
+  saving.value = true;
   try {
     const data = new FormData();
-    data.append("name", formData.value.name);
-
+    data.append("name", editedItem.value.name.trim());
     if (selectedFile.value) {
       data.append("logo", selectedFile.value);
     }
 
-    if (isEditMode.value) {
-      await BrandService.update(formData.value.id, data);
+    if (isEditing.value) {
+      await BrandService.update(editedItem.value.id, data);
+      showMessage("Cập nhật thương hiệu thành công");
     } else {
       await BrandService.create(data);
+      showMessage("Thêm thương hiệu thành công");
     }
 
-    closeModal();
-    await fetchBrands();
+    await loadData();
+    closeDialog();
   } catch (error) {
-    alert(error.response?.data?.message || "Lỗi khi lưu dữ liệu");
+    showMessage(error.response?.data?.message || "Có lỗi xảy ra", "error");
   } finally {
-    isLoading.value = false;
+    saving.value = false;
   }
 };
 
+const confirmDelete = async (item) => {
+  const isConfirmed = await confirmDialogRef.value.open(
+    "Xóa Thương Hiệu",
+    `Bạn có chắc chắn muốn xóa thương hiệu "${item.name}"? Các sản phẩm thuộc thương hiệu này có thể bị ảnh hưởng.`,
+  );
+
+  if (isConfirmed) {
+    try {
+      await BrandService.delete(item.id);
+      showMessage("Đã xóa thương hiệu thành công");
+      await loadData();
+    } catch (error) {
+      showMessage("Không thể xóa thương hiệu này", "error");
+    }
+  }
+};
+
+const showMessage = (text, color = "success") => {
+  snackbar.value = { show: true, text, color };
+};
+
 onMounted(() => {
-  fetchBrands();
+  loadData();
 });
 </script>
 
 <style scoped>
-/* Tái sử dụng CSS từ file gốc của bạn... */
-.brand-manager {
-  max-width: 900px;
+.gap-2 {
+  gap: 8px;
 }
-.header-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.input-text {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-  margin-top: 5px;
+.gap-3 {
+  gap: 12px;
 }
 
-.btn {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  color: white;
-  margin-right: 5px;
-}
-.btn-add {
-  background-color: #28a745;
-}
-.btn-edit {
-  background-color: #ffc107;
+.custom-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid #c5cae9;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  background: #fafbff;
   color: #000;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
-.btn-delete {
-  background-color: #dc3545;
-}
-.btn-save {
-  background-color: #007bff;
-}
-.btn-cancel {
-  background-color: #6c757d;
-}
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-} /* Thêm CSS cho trạng thái disabled */
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.data-table th,
-.data-table td {
-  border: 1px solid #ddd;
-  padding: 12px;
-  text-align: left;
-  vertical-align: middle;
-}
-.data-table th {
-  background-color: #f4f6f9;
-}
-.text-center {
-  text-align: center;
-}
-
-.brand-logo {
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  padding: 2px;
+.custom-input:focus {
+  border-color: #3949ab;
+  box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.12);
   background: #fff;
 }
-.preview-container {
-  margin-top: 10px;
-  text-align: center;
-}
-.preview-img {
-  max-width: 100%;
-  max-height: 120px;
-  border: 1px dashed #ccc;
-  padding: 5px;
+.file-input {
+  padding: 6px 10px;
+  cursor: pointer;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+:deep(.v-data-table th.v-data-table__th) {
+  background: linear-gradient(90deg, #e8eaf6 0%, #f3f4f6 100%) !important;
+  color: #283593 !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
 }
-.modal-content {
-  background-color: #fff;
-  padding: 25px;
-  border-radius: 8px;
-  width: 450px;
-  max-width: 90%;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+:deep(.v-data-table th.v-data-table__th:hover),
+:deep(.v-data-table th.v-data-table__th:hover .v-data-table-header__sort-icon) {
+  color: #1a237e !important;
 }
-.modal-content h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-}
-.form-group {
-  margin-bottom: 15px;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+
+:deep(.v-data-table td) {
+  vertical-align: middle;
 }
 </style>

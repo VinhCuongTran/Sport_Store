@@ -68,24 +68,78 @@
             </v-chip>
           </div>
 
-          <v-list lines="two" class="pa-0">
-            <v-list-item class="pa-4">
-              <v-list-item-title class="font-weight-bold"
-                >Đơn hàng gửi đến: {{ order.receiver_name }}</v-list-item-title
+          <div
+            class="pa-4 bg-white"
+            v-if="order.items && order.items.length > 0"
+          >
+            <div
+              v-for="item in order.items"
+              :key="item.id"
+              class="d-flex align-center py-3 border-b border-dashed"
+            >
+              <v-avatar
+                rounded="0"
+                size="70"
+                class="bg-grey-lighten-4 mr-4 border"
               >
-              <v-list-item-subtitle class="mt-1"
-                >Địa chỉ: {{ order.shipping_address }}</v-list-item-subtitle
+                <v-img
+                  :src="item.image_url || 'https://placehold.co/100'"
+                  cover
+                ></v-img>
+              </v-avatar>
+
+              <div class="flex-grow-1 pr-4">
+                <div class="font-weight-bold text-body-1">
+                  {{ item.product_name }}
+                </div>
+                <div class="text-caption text-grey-darken-1 mt-1">
+                  Phân loại: {{ item.color }}, {{ item.size }}
+                  <span class="mx-2">|</span> Số lượng: x{{ item.quantity }}
+                </div>
+              </div>
+
+              <div
+                class="text-right d-flex flex-column align-end justify-center min-w-100"
               >
-              <v-list-item-subtitle
-                >SĐT: {{ order.phone_number }} | PT:
-                {{ order.payment_method }}</v-list-item-subtitle
-              >
-            </v-list-item>
-          </v-list>
+                <div class="font-weight-bold mb-2">
+                  {{ formatPrice(item.price) }}
+                </div>
+
+                <v-btn
+                  v-if="
+                    order.status === 'completed' &&
+                    !reviewedItems.includes(item.product_id)
+                  "
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  class="text-none font-weight-bold"
+                  prepend-icon="mdi-star"
+                  @click="openReviewDialog(item, order.id)"
+                >
+                  Đánh giá
+                </v-btn>
+                <v-chip
+                  v-else-if="
+                    order.status === 'completed' &&
+                    reviewedItems.includes(item.product_id)
+                  "
+                  size="small"
+                  color="success"
+                  class="font-weight-bold"
+                  variant="flat"
+                >
+                  <v-icon start icon="mdi-check-circle"></v-icon> Đã đánh giá
+                </v-chip>
+              </div>
+            </div>
+          </div>
 
           <v-divider></v-divider>
 
-          <div class="pa-4 d-flex justify-space-between align-center">
+          <div
+            class="pa-4 d-flex justify-space-between align-center bg-grey-lighten-5"
+          >
             <div>
               <span class="text-grey-darken-1 mr-2">Tổng tiền:</span>
               <span class="text-h6 font-weight-black text-red-darken-2">{{
@@ -114,7 +168,7 @@
     <v-dialog v-model="dialogDetail" max-width="600px">
       <v-card class="rounded-xl" v-if="selectedOrder">
         <v-card-title
-          class="bg-black text-white pa-4 d-flex justify-space-between"
+          class="bg-black text-white pa-4 d-flex justify-space-between align-center"
         >
           <span>Chi tiết đơn #{{ selectedOrder.id }}</span>
           <v-btn
@@ -126,10 +180,24 @@
         </v-card-title>
         <v-card-text class="pa-4">
           <v-list>
+            <v-list-item class="pa-0 mb-4 bg-grey-lighten-4 pa-4 rounded-lg">
+              <v-list-item-title class="font-weight-bold"
+                >Gửi đến: {{ selectedOrder.receiver_name }}</v-list-item-title
+              >
+              <v-list-item-subtitle class="mt-1"
+                >Địa chỉ:
+                {{ selectedOrder.shipping_address }}</v-list-item-subtitle
+              >
+              <v-list-item-subtitle
+                >SĐT: {{ selectedOrder.phone_number }} | PT:
+                {{ selectedOrder.payment_method }}</v-list-item-subtitle
+              >
+            </v-list-item>
+
             <v-list-item
               v-for="item in selectedOrder.items"
               :key="item.id"
-              class="border-b mb-2 pb-2"
+              class="border-b mb-2 pb-2 pa-0"
             >
               <v-list-item-title class="font-weight-bold">{{
                 item.product_name
@@ -156,6 +224,63 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="dialogReview" max-width="500px">
+      <v-card class="rounded-xl">
+        <v-card-title
+          class="bg-white border-b pa-4 d-flex justify-space-between align-center"
+        >
+          <span class="font-weight-bold">Đánh giá sản phẩm</span>
+          <v-btn
+            icon="mdi-close"
+            density="compact"
+            variant="text"
+            @click="dialogReview = false"
+          ></v-btn>
+        </v-card-title>
+        <v-card-text class="pa-6">
+          <div class="text-center mb-6">
+            <h3 class="text-subtitle-1 font-weight-bold mb-2">
+              {{ reviewItem?.product_name }}
+            </h3>
+            <v-rating
+              v-model="reviewForm.rating"
+              color="warning"
+              active-color="warning"
+              hover
+              size="x-large"
+            ></v-rating>
+            <div class="text-caption text-grey mt-1">
+              Chọn số sao để đánh giá
+            </div>
+          </div>
+
+          <v-textarea
+            v-model="reviewForm.comment"
+            label="Nhận xét của bạn về sản phẩm (Tuỳ chọn)"
+            variant="outlined"
+            rows="4"
+            hide-details
+            color="black"
+          ></v-textarea>
+        </v-card-text>
+        <v-card-actions class="pa-4 pt-0">
+          <v-btn
+            color="black"
+            block
+            size="large"
+            variant="flat"
+            class="font-weight-bold"
+            @click="submitReview"
+            :loading="isSubmittingReview"
+          >
+            GỬI ĐÁNH GIÁ
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <ConfirmDialog ref="confirmDialog" />
   </div>
 </template>
 
@@ -163,14 +288,25 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import OrderService from "@/services/order.service";
+import ReviewService from "@/services/review.service";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
 const router = useRouter();
+const confirmDialog = ref(null);
+
 const orders = ref([]);
 const isLoading = ref(true);
 const activeTab = ref("all");
 
 const dialogDetail = ref(false);
 const selectedOrder = ref(null);
+
+const dialogReview = ref(false);
+const reviewItem = ref(null);
+const currentOrderId = ref(null);
+const isSubmittingReview = ref(false);
+const reviewForm = ref({ rating: 5, comment: "" });
+const reviewedItems = ref([]);
 
 const formatPrice = (value) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
@@ -200,7 +336,6 @@ const getStatusColor = (status) => {
   return map[status] || "grey";
 };
 
-// Computed Lọc Đơn hàng theo Tab
 const filteredOrders = computed(() => {
   if (activeTab.value === "all") return orders.value;
   return orders.value.filter((o) => o.status === activeTab.value);
@@ -214,7 +349,6 @@ const fetchOrders = async () => {
       router.push("/login");
       return;
     }
-
     const user = JSON.parse(userStr);
     orders.value = await OrderService.getByUser(user.id);
   } catch (error) {
@@ -229,13 +363,53 @@ const viewDetail = async (orderId) => {
     selectedOrder.value = await OrderService.get(orderId);
     dialogDetail.value = true;
   } catch (error) {
-    alert("Không thể tải chi tiết");
+    confirmDialog.value.open(
+      "Có lỗi xảy ra",
+      "Không thể tải chi tiết đơn hàng lúc này.",
+      { isAlert: true, iconColor: "red" },
+    );
   }
 };
 
-onMounted(() => {
-  fetchOrders();
-});
+const openReviewDialog = (item, orderId) => {
+  reviewItem.value = item;
+  currentOrderId.value = orderId;
+  reviewForm.value = { rating: 5, comment: "" };
+  dialogReview.value = true;
+};
+
+const submitReview = async () => {
+  if (!reviewForm.value.rating) return;
+  isSubmittingReview.value = true;
+  try {
+    const userStr = localStorage.getItem("user");
+    const user = JSON.parse(userStr);
+
+    await ReviewService.create({
+      user_id: user.id,
+      product_id: reviewItem.value.product_id,
+      order_id: currentOrderId.value,
+      rating: reviewForm.value.rating,
+      comment: reviewForm.value.comment,
+    });
+
+    confirmDialog.value.open("Thành công", "Cảm ơn bạn đã đánh giá sản phẩm!", {
+      isAlert: true,
+    });
+    dialogReview.value = false;
+    reviewedItems.value.push(reviewItem.value.product_id);
+  } catch (error) {
+    confirmDialog.value.open(
+      "Lỗi",
+      "Không thể gửi đánh giá. Có thể bạn đã đánh giá rồi.",
+      { isAlert: true, iconColor: "red" },
+    );
+  } finally {
+    isSubmittingReview.value = false;
+  }
+};
+
+onMounted(() => fetchOrders());
 </script>
 
 <style scoped>
@@ -244,5 +418,11 @@ onMounted(() => {
 }
 .gap-2 {
   gap: 8px;
+}
+.min-w-100 {
+  min-width: 100px;
+}
+.border-dashed {
+  border-bottom-style: dashed !important;
 }
 </style>

@@ -2,7 +2,6 @@ import { createWebHistory, createRouter } from "vue-router";
 import AuthService from "../services/auth.service";
 
 const routes = [
-  // 1. CÁC TRANG DÀNH CHO ADMIN
   {
     path: "/admin",
     component: () => import("../components/Admin/AdminLayout.vue"),
@@ -17,6 +16,11 @@ const routes = [
         path: "categories",
         name: "admin-category",
         component: () => import("../views/Admin/AdminCategory.vue"),
+      },
+      {
+        path: "sports",
+        name: "admin-sport",
+        component: () => import("../views/Admin/AdminSport.vue"),
       },
       {
         path: "brands",
@@ -51,7 +55,6 @@ const routes = [
     ],
   },
 
-  // 2. CÁC TRANG CỦA KHÁCH CÓ HEADER & FOOTER
   {
     path: "/",
     component: () => import("../components/DefaultLayout.vue"),
@@ -91,7 +94,21 @@ const routes = [
         name: "orders",
         component: () => import("../views/Order.vue"),
       },
-      // ĐEM TRANG 404 VÀO TRONG NÀY ĐỂ NÓ CÓ HEADER VÀ FOOTER
+      {
+        path: "About-Us",
+        name: "About-Us",
+        component: () => import("../views/AboutUs.vue"),
+      },
+      {
+        path: "All-Brands",
+        name: "All-Brands",
+        component: () => import("../views/AllBrands.vue"),
+      },
+      {
+        path: "New-Arrivals",
+        name: "New-Arrivals",
+        component: () => import("../views/NewArrivals.vue"),
+      },
       {
         path: "/:pathMatch(.*)*",
         name: "notfound",
@@ -99,31 +116,36 @@ const routes = [
       },
     ],
   },
-
-  // 3. CÁC TRANG ĐỘC LẬP (Không dùng Header/Footer chung)
   {
     path: "/login",
     name: "login",
-    component: () => import("../views/Login.vue"),
+    component: () => import("../views/Auth.vue"),
+  },
+  {
+    path: "/register",
+    name: "register",
+    component: () => import("../views/Auth.vue"),
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    } else {
+      return { top: 0, behavior: "smooth" };
+    }
+  },
 });
 
 router.beforeEach((to, from) => {
-  // Kiểm tra xem route chuẩn bị vào có yêu cầu quyền Admin không
   if (to.matched.some((record) => record.meta.requiresAdmin)) {
-    // Nếu không phải là Admin hoặc Staff thì ĐẨY về trang đăng nhập
     if (!AuthService.isAdmin()) {
-      return { name: "login" }; // Dùng return thay vì gọi next({ name: "login" })
+      return { name: "login" };
     }
   }
-
-  // Nếu hợp lệ, không cần gọi next(), chỉ cần không return gì cả (hoặc return true)
-  // Vue Router 4 sẽ tự động cho phép đi tiếp!
   return true;
 });
 

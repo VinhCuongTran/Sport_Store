@@ -1,15 +1,12 @@
 import api from "./api.service";
 
 class ReviewService {
-  // Dành cho Admin
   async getAll() {
     return (await api.get("/reviews")).data;
   }
   async delete(id) {
     return (await api.delete(`/reviews/${id}`)).data;
   }
-
-  // Dành cho Client
   async getByProduct(productId) {
     return (await api.get(`/reviews/product/${productId}`)).data;
   }

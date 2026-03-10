@@ -24,13 +24,10 @@ const UserController = {
   update: asyncHandler(async (req, res) => {
     const data = req.body;
 
-    // BỔ SUNG: Ràng buộc bảo mật (giả sử req.user được gán từ verifyToken)
-    // Nếu không phải admin, không cho phép đổi quyền (role) và trạng thái (status)
     if (req.user && req.user.role !== "admin" && req.user.role !== "staff") {
       delete data.role;
       delete data.status;
 
-      // Ngăn chặn việc sửa tài khoản người khác nếu không phải admin
       if (req.user.id !== parseInt(req.params.id)) {
         throw new ApiError(
           403,
@@ -43,7 +40,6 @@ const UserController = {
       data.avatar = req.file.path;
     }
 
-    // Xử lý khi user gửi chuỗi rỗng lên để xóa số điện thoại
     if (data.phone_number === "") data.phone_number = null;
 
     if (data.password) {

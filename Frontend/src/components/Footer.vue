@@ -1,5 +1,5 @@
 <template>
-  <v-footer class="bg-black text-white py-10 mt-10" elevation="0">
+  <v-footer class="custom-footer text-white py-10 mt-10" elevation="0">
     <v-container>
       <v-row>
         <v-col
@@ -54,7 +54,7 @@
           <div class="footer-title-wrap mb-4">
             <h4 class="footer-static-title">Theo dõi chúng tôi</h4>
           </div>
-          
+
           <div class="d-flex gap-3 mb-6 justify-center">
             <v-btn
               icon
@@ -84,9 +84,10 @@
               <v-icon size="small">mdi-youtube</v-icon>
             </v-btn>
           </div>
-          
+
           <p class="text-caption text-grey-darken-1">
-            &copy; {{ new Date().getFullYear() }} - Sport Store. Bảo lưu mọi quyền.
+            &copy; {{ new Date().getFullYear() }} - Sport Store. Bảo lưu mọi
+            quyền.
           </p>
         </v-col>
       </v-row>
@@ -97,14 +98,16 @@
 <script setup></script>
 
 <style scoped>
-/* Class dùng chung để cố định chiều cao tiêu đề, giúp 3 cột ngang hàng nhau */
+.custom-footer {
+  background-color: #001a2d !important;
+}
+
 .footer-title-wrap {
   display: flex;
   align-items: center;
-  height: 55px; /* Khớp với chiều cao logo ở Header */
+  height: 55px; 
 }
 
-/* Logo Footer */
 .footer-logo-img {
   height: 50px;
   width: auto;
@@ -112,7 +115,6 @@
   border-radius: 4px;
 }
 
-/* Chữ Sport Store bôi đen đậm giống Header */
 .footer-brand-text {
   font-size: 1.5rem;
   font-weight: 900;
@@ -121,7 +123,6 @@
   margin: 0;
 }
 
-/* Tiêu đề các cột khác (Thông tin, Theo dõi) bôi đen và ngang hàng */
 .footer-static-title {
   font-size: 1.25rem;
   font-weight: 900;

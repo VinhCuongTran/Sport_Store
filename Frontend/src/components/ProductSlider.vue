@@ -36,12 +36,11 @@
           <v-col
             cols="12"
             md="7"
-            class="py-10 px-10 d-flex flex-column justify-center"
-            style="background-color: #111; color: white"
+            class="py-10 px-10 d-flex flex-column justify-center custom-bg text-white"
           >
             <v-chip
               v-if="product.active_discount > 0"
-              color="red"
+              color="red-lighten-1"
               class="mb-4 align-self-start font-weight-bold"
             >
               Đang Sale -{{ product.active_discount }}%
@@ -50,11 +49,15 @@
             <h2 class="text-h3 font-weight-bold mb-4 line-clamp-2">
               {{ product.name }}
             </h2>
-            <p class="text-h6 mb-2 text-grey-lighten-1">
+
+            <p class="text-h6 mb-2 text-white">
               Thương hiệu:
-              <span class="text-white">{{ product.brand_name || "Khác" }}</span>
+              <span class="font-weight-bold">{{
+                product.brand_name || "Khác"
+              }}</span>
             </p>
-            <p class="text-body-1 mb-8 text-grey-lighten-1 line-clamp-3">
+
+            <p class="text-body-1 mb-8 text-white line-clamp-3">
               {{
                 product.description ||
                 "Khám phá ngay sản phẩm thể thao chất lượng cao giúp bạn bứt phá giới hạn của bản thân."
@@ -67,7 +70,7 @@
                 color="white"
                 variant="outlined"
                 size="x-large"
-                class="text-capitalize font-weight-bold px-8 rounded-pill"
+                class="text-capitalize font-weight-bold px-8 rounded-pill hover-btn-white"
               >
                 Xem chi tiết
                 <v-icon right class="ml-2">mdi-arrow-right</v-icon>
@@ -85,7 +88,7 @@
     >
       <v-progress-circular
         indeterminate
-        color="black"
+        color="#001a2d"
         size="64"
       ></v-progress-circular>
     </div>
@@ -102,9 +105,7 @@ const fetchRandomProducts = async () => {
   try {
     const products = await ProductService.getAll();
     if (products && products.length > 0) {
-      // Lọc ra sản phẩm đang hiển thị (active)
       const activeProducts = products.filter((p) => p.status === "active");
-      // Đảo ngẫu nhiên và lấy 3 sản phẩm
       const shuffled = [...activeProducts].sort(() => 0.5 - Math.random());
       featuredProducts.value = shuffled.slice(0, 3);
     }
@@ -119,6 +120,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.custom-bg {
+  background-color: #001a2d !important;
+}
+
+.hover-btn-white:hover {
+  background-color: white !important;
+  color: #001a2d !important;
+  transition: all 0.3s ease;
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-box-orient: vertical;

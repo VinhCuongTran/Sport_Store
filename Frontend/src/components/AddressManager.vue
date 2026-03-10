@@ -1,8 +1,8 @@
 <template>
   <v-dialog v-model="isOpen" max-width="650px" scrollable persistent>
-    <v-card class="rounded-xl bg-grey-lighten-5">
+    <v-card class="rounded-xl bg-white text-black">
       <v-card-title
-        class="bg-black text-white pa-4 d-flex justify-space-between align-center"
+        class="custom-header-bg text-white pa-4 d-flex justify-space-between align-center"
       >
         <span class="text-h6 font-weight-bold">
           <v-icon left class="mr-2">mdi-map-marker-multiple</v-icon>
@@ -23,11 +23,14 @@
         ></v-btn>
       </v-card-title>
 
-      <v-card-text class="pa-4 pa-sm-6" style="max-height: 75vh">
+      <v-card-text
+        class="pa-4 pa-sm-6 bg-grey-lighten-5"
+        style="max-height: 75vh"
+      >
         <div v-if="isLoading" class="d-flex justify-center py-10">
           <v-progress-circular
             indeterminate
-            color="black"
+            color="#001a2d"
             size="40"
           ></v-progress-circular>
         </div>
@@ -37,14 +40,14 @@
             v-if="addresses.length >= 5"
             type="info"
             variant="tonal"
-            class="mb-4 text-caption"
+            class="mb-4 text-caption custom-main-color"
             density="compact"
           >
             Bạn đã đạt giới hạn lưu 5 địa chỉ.
           </v-alert>
 
           <div v-if="addresses.length === 0" class="text-center py-10">
-            <v-icon size="64" color="grey-lighten-2" class="mb-3"
+            <v-icon size="64" color="grey-lighten-1" class="mb-3"
               >mdi-map-marker-off-outline</v-icon
             >
             <p class="text-grey-darken-1">Bạn chưa có địa chỉ nhận hàng nào.</p>
@@ -58,7 +61,7 @@
             <div class="d-flex justify-space-between align-start">
               <div class="pr-2">
                 <div class="d-flex align-center flex-wrap gap-2 mb-1">
-                  <span class="font-weight-bold text-subtitle-1">{{
+                  <span class="font-weight-bold text-subtitle-1 text-black">{{
                     addr.receiver_name
                   }}</span>
                   <span class="text-grey-lighten-1">|</span>
@@ -71,10 +74,10 @@
                 </p>
                 <v-chip
                   v-if="addr.is_default"
-                  color="red-darken-2"
+                  color="#001a2d"
                   size="small"
-                  variant="outlined"
-                  class="font-weight-bold"
+                  variant="flat"
+                  class="font-weight-bold text-white"
                 >
                   Mặc định
                 </v-chip>
@@ -87,15 +90,17 @@
                     variant="text"
                     size="small"
                     v-bind="props"
-                    color="grey-darken-2"
+                    color="black"
                   ></v-btn>
                 </template>
-                <v-list density="compact" class="elevation-2 border">
+                <v-list density="compact" class="elevation-2 bg-white pa-2">
                   <v-list-item
                     @click="openForm(addr)"
                     prepend-icon="mdi-pencil-outline"
+                    class="rounded-lg mb-1"
                   >
-                    <v-list-item-title class="text-blue-darken-2"
+                    <v-list-item-title
+                      class="text-blue-darken-2 font-weight-bold"
                       >Cập nhật</v-list-item-title
                     >
                   </v-list-item>
@@ -103,18 +108,18 @@
                     v-if="!addr.is_default"
                     @click="setDefault(addr.id)"
                     prepend-icon="mdi-check-circle-outline"
+                    class="rounded-lg mb-1"
                   >
-                    <v-list-item-title class="text-black"
-                      >Đặt làm mặc định</v-list-item-title
-                    >
+                    <v-list-item-title>Đặt làm mặc định</v-list-item-title>
                   </v-list-item>
                   <v-list-item
                     v-if="!addr.is_default"
                     @click="deleteAddress(addr.id)"
                     prepend-icon="mdi-trash-can-outline"
+                    class="rounded-lg"
                   >
-                    <v-list-item-title class="text-red-darken-2"
-                      >Xóa</v-list-item-title
+                    <v-list-item-title class="text-red font-weight-bold"
+                      >Xóa địa chỉ</v-list-item-title
                     >
                   </v-list-item>
                 </v-list>
@@ -124,9 +129,9 @@
 
           <v-btn
             block
-            color="black"
-            size="x-large"
-            class="mt-4 rounded-lg font-weight-bold"
+            variant="outlined"
+            size="large"
+            class="mt-4 rounded-lg font-weight-bold custom-btn-outline"
             prepend-icon="mdi-plus"
             @click="openForm(null)"
             :disabled="addresses.length >= 5"
@@ -135,7 +140,7 @@
           </v-btn>
         </div>
 
-        <div v-else class="bg-white pa-4 rounded-lg border">
+        <div v-else class="bg-white pa-6 rounded-lg border">
           <v-form ref="formRef" @submit.prevent="submitForm">
             <v-row density="compact">
               <v-col cols="12" sm="6">
@@ -145,7 +150,7 @@
                   variant="outlined"
                   density="comfortable"
                   :rules="[(v) => !!v || 'Bắt buộc nhập']"
-                  color="black"
+                  color="#001a2d"
                   class="mb-2"
                 ></v-text-field>
               </v-col>
@@ -156,7 +161,7 @@
                   variant="outlined"
                   density="comfortable"
                   :rules="[(v) => !!v || 'Bắt buộc nhập']"
-                  color="black"
+                  color="#001a2d"
                   class="mb-2"
                 ></v-text-field>
               </v-col>
@@ -171,9 +176,8 @@
               variant="outlined"
               density="comfortable"
               :rules="[(v) => !!v || 'Vui lòng chọn Tỉnh/Thành phố']"
-              color="black"
+              color="#001a2d"
               class="mb-2"
-              no-data-text="Đang tải dữ liệu Tỉnh..."
               @update:model-value="onProvinceChange"
             ></v-autocomplete>
 
@@ -186,33 +190,30 @@
               variant="outlined"
               density="comfortable"
               :rules="[(v) => !!v || 'Vui lòng chọn Phường/Xã']"
-              color="black"
+              color="#001a2d"
               class="mb-2"
               :disabled="!selectedProvId"
               :loading="isLoadingCommunes"
-              no-data-text="Không tìm thấy Phường/Xã"
             ></v-autocomplete>
 
             <v-text-field
               v-model="formData.detailed_address"
-              label="Số nhà, Tên đường, Ấp/Khu phố..."
+              label="Số nhà, Tên đường..."
               variant="outlined"
               density="comfortable"
               :rules="[
                 (v) => !!v || 'Vui lòng nhập địa chỉ chi tiết',
-                (v) =>
-                  (v && v.trim().length >= 5) ||
-                  'Vui lòng nhập rõ ràng (tối thiểu 5 ký tự)',
+                (v) => (v && v.trim().length >= 5) || 'Tối thiểu 5 ký tự',
               ]"
-              color="black"
+              color="#001a2d"
               class="mb-2"
-              placeholder="VD: Số 12, Đường Lê Lợi, Ấp 1"
+              placeholder="VD: Số 12, Đường Lê Lợi"
             ></v-text-field>
 
             <v-checkbox
               v-model="formData.is_default"
               label="Đặt làm địa chỉ mặc định"
-              color="red-darken-2"
+              color="#001a2d"
               hide-details
               class="mb-6"
             ></v-checkbox>
@@ -221,14 +222,13 @@
               <v-btn
                 class="flex-grow-1 font-weight-bold"
                 variant="outlined"
-                color="black"
+                color="grey-darken-1"
                 size="large"
                 @click="isFormView = false"
                 >Hủy bỏ</v-btn
               >
               <v-btn
-                class="flex-grow-1 font-weight-bold"
-                color="black"
+                class="flex-grow-1 font-weight-bold custom-btn"
                 size="large"
                 type="submit"
                 :loading="isSaving"
@@ -292,8 +292,6 @@ const showMessage = (text, color = "success") => {
   snackbar.value = { show: true, text, color };
 };
 
-// ================= API TỈNH/XÃ VIỆT NAM (CẬP NHẬT SAU SÁP NHẬP 2025) =================
-// Nguồn: provinces.open-api.vn/api/v2 — hỗ trợ CORS, cập nhật sau sáp nhập 2025
 const ADDR_API = "https://provinces.open-api.vn/api/v2";
 
 const fetchProvinces = async () => {
@@ -302,7 +300,6 @@ const fetchProvinces = async () => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
 
-    // API v2 trả về mảng: [{ code, name, ... }]
     provinces.value = data.map((p) => ({
       id: p.code,
       name: p.name,
@@ -317,14 +314,12 @@ const fetchCommunes = async (provCode) => {
   isLoadingCommunes.value = true;
   communes.value = [];
   try {
-    // GET /w/?province={code} — 1 request lấy toàn bộ xã/phường thuộc tỉnh
     const response = await fetch(
       `${ADDR_API}/w/?province=${parseInt(provCode)}`,
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
 
-    // API v2 trả về mảng trực tiếp: [{ code, name, ... }]
     communes.value = data.map((c) => ({
       id: c.code,
       name: c.name,
@@ -342,7 +337,6 @@ const onProvinceChange = async (newProvId) => {
   if (newProvId) await fetchCommunes(newProvId);
 };
 
-// ================= CRUD SỔ ĐỊA CHỈ =================
 const fetchUserAddresses = async () => {
   isLoading.value = true;
   try {
@@ -376,7 +370,6 @@ const openForm = async (item) => {
       const pName = parts[parts.length - 1].trim();
       const cName = parts[parts.length - 2].trim();
 
-      // Tìm tỉnh theo tên (so sánh không phân biệt hoa thường để tăng độ khớp)
       const p = provinces.value.find(
         (x) => x.name.toLowerCase() === pName.toLowerCase(),
       );
@@ -384,7 +377,6 @@ const openForm = async (item) => {
         selectedProvId.value = p.id;
         await fetchCommunes(p.id);
 
-        // Tìm xã/phường theo tên
         const c = communes.value.find(
           (x) => x.name.toLowerCase() === cName.toLowerCase(),
         );
@@ -480,10 +472,43 @@ const setDefault = async (id) => {
 </script>
 
 <style scoped>
+.custom-header-bg {
+  background-color: #001a2d !important;
+}
+
+.custom-main-color {
+  color: #001a2d !important;
+}
+
+.custom-btn {
+  background-color: #001a2d !important;
+  color: white !important;
+  transition: all 0.3s ease;
+}
+
+.custom-btn:hover {
+  color: #77e51f !important;
+  transform: translateY(-1px);
+}
+
+.custom-btn-outline {
+  border-color: #001a2d !important;
+  color: #001a2d !important;
+}
+
+.custom-btn-outline:hover {
+  background-color: #001a2d !important;
+  color: #77e51f !important;
+}
+
 .gap-2 {
   gap: 8px;
 }
 .gap-3 {
   gap: 12px;
+}
+
+.text-black {
+  color: #1a1a1a !important;
 }
 </style>

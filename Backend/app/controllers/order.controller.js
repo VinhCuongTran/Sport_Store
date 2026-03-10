@@ -2,9 +2,9 @@ const OrderModel = require("../models/order.model");
 const CartModel = require("../models/cart.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const db = require("../utils/mysql.db");
 
 const OrderController = {
-  // Đặt hàng
   createOrder: asyncHandler(async (req, res) => {
     const {
       user_id,
@@ -33,6 +33,37 @@ const OrderController = {
         "Vui lòng cung cấp đủ thông tin đặt hàng (người nhận, sđt, địa chỉ và danh sách sản phẩm)",
       );
     }
+    if (voucher_id) {
+      const [usedVoucher] = await db.query(
+        "SELECT id FROM orders WHERE user_id = ? AND voucher_id = ? LIMIT 1",
+        [user_id, voucher_id],
+      );
+
+      if (usedVoucher && usedVoucher.length > 0) {
+        throw new ApiError(
+          400,
+          "Tài khoản của bạn đã sử dụng mã giảm giá này cho một đơn hàng trước đó!",
+        );
+      }
+    }
+    for (const item of items) {
+      const [variantInfo] = await db.query(
+        "SELECT stock FROM product_variants WHERE id = ?",
+        [item.variant_id],
+      );
+      if (!variantInfo || variantInfo.length === 0) {
+        throw new ApiError(
+          400,
+          `Sản phẩm "${item.product_name}" không tồn tại.`,
+        );
+      }
+      if (variantInfo[0].stock < item.quantity) {
+        throw new ApiError(
+          400,
+          `Sản phẩm "${item.product_name}" không đủ hàng. (Kho còn ${variantInfo[0].stock})`,
+        );
+      }
+    }
 
     const orderData = {
       user_id,
@@ -48,7 +79,6 @@ const OrderController = {
 
     const orderId = await OrderModel.create(orderData, items);
 
-    // Nếu người dùng đặt hàng từ Giỏ hàng -> Xóa giỏ hàng sau khi đặt thành công
     if (is_from_cart) {
       const cartId = await CartModel.getCartIdByUserId(user_id);
       await CartModel.clearCart(cartId);
@@ -65,14 +95,12 @@ const OrderController = {
     res.json(orders);
   }),
 
-  // Lấy lịch sử đơn hàng của User
   getUserOrders: asyncHandler(async (req, res) => {
     const userId = req.params.userId;
     const orders = await OrderModel.getByUserId(userId);
     res.json(orders);
   }),
 
-  // Xem chi tiết đơn hàng
   getOrderById: asyncHandler(async (req, res) => {
     const orderId = req.params.id;
     const order = await OrderModel.getById(orderId);
@@ -82,17 +110,20 @@ const OrderController = {
     res.json(order);
   }),
 
-  // Cập nhật trạng thái đơn hàng (Dành cho Staff/Admin)
   updateOrderStatus: asyncHandler(async (req, res) => {
     const orderId = req.params.id;
-    const { status, payment_status } = req.body;
-    const staff_id = req.user.id; // Lấy ID của Admin/Staff đang thao tác từ Token
+
+    let { status, payment_status } = req.body;
+    const staff_id = req.user.id;
 
     if (!status || !payment_status) {
       throw new ApiError(
         400,
         "Vui lòng cung cấp trạng thái đơn hàng và trạng thái thanh toán",
       );
+    }
+    if (status === "completed") {
+      payment_status = "paid";
     }
 
     const isUpdated = await OrderModel.updateStatus(
@@ -101,6 +132,7 @@ const OrderController = {
       payment_status,
       staff_id,
     );
+
     if (!isUpdated) {
       throw new ApiError(404, "Không tìm thấy đơn hàng để cập nhật");
     }

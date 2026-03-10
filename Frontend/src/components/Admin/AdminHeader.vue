@@ -1,18 +1,78 @@
 <template>
-  <header class="admin-header">
-    <div class="logo d-flex align-center">
-      <div style="background: white; padding: 2px 5px; border-radius: 4px; display: inline-flex; margin-right: 10px;">
-        <img src="../../assets/logo.jpg" alt="Admin Logo" height="30" />
-      </div>
-      <h3 class="m-0">Admin Panel</h3>
+  <v-app-bar
+    color="indigo-darken-4"
+    elevation="4"
+    height="64"
+    style="border-bottom: 2px solid rgba(255, 255, 255, 0.08)"
+  >
+    <v-app-bar-nav-icon
+      @click="$emit('toggle-drawer')"
+      color="white"
+      variant="text"
+    ></v-app-bar-nav-icon>
+
+    <div
+      class="d-flex align-center rounded-lg mx-2 px-2 py-1"
+      style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(4px)"
+    >
+      <img
+        src="../../assets/logo.jpg"
+        alt="Admin Logo"
+        height="32"
+        style="border-radius: 6px"
+      />
     </div>
-    <div class="user-info">
-      <span v-if="user" class="greeting"
-        >Xin chào, {{ user.name || user.email }}</span
+
+    <v-app-bar-title
+      class="font-weight-bold text-uppercase text-body-1 text-white ml-1"
+      style="letter-spacing: 1.5px"
+    >
+      Trang Quản Trị
+    </v-app-bar-title>
+
+    <v-spacer></v-spacer>
+
+    <v-btn
+      prepend-icon="mdi-home"
+      variant="tonal"
+      color="white"
+      class="mr-3 text-capitalize"
+      rounded="lg"
+      @click="goToHome"
+    >
+      Trang Khách
+    </v-btn>
+
+    <div v-if="user" class="d-none d-sm-flex align-center mr-4">
+      <v-avatar
+        size="36"
+        class="mr-2"
+        style="
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.5);
+        "
       >
-      <button @click="handleLogout" class="btn-logout">Đăng xuất</button>
+        <v-icon color="white" size="20">mdi-account</v-icon>
+      </v-avatar>
+      <div class="d-flex flex-column" style="line-height: 1.2">
+        <span class="text-caption text-blue-grey-lighten-3">Xin chào,</span>
+        <strong class="text-body-2 text-white">{{
+          user.name || user.email
+        }}</strong>
+      </div>
     </div>
-  </header>
+
+    <v-btn
+      prepend-icon="mdi-logout"
+      color="red-lighten-1"
+      variant="flat"
+      class="mr-2 text-capitalize"
+      rounded="lg"
+      @click="handleLogout"
+    >
+      Đăng xuất
+    </v-btn>
+  </v-app-bar>
 </template>
 
 <script setup>
@@ -24,7 +84,6 @@ const router = useRouter();
 const user = ref(null);
 
 onMounted(() => {
-  // Lấy thông tin user từ localStorage để hiển thị
   const userData = localStorage.getItem("user");
   if (userData) {
     user.value = JSON.parse(userData);
@@ -32,50 +91,22 @@ onMounted(() => {
 });
 
 const handleLogout = () => {
-  AuthService.logout(); // Xóa token và user khỏi localStorage
-  router.push({ name: "login" }); // Đẩy về trang đăng nhập
+  AuthService.logout();
+  router.push({ name: "login" });
+};
+
+const goToHome = () => {
+  router.push({ name: "home" });
 };
 </script>
 
 <style scoped>
-.admin-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 30px;
-  height: 60px;
-  background-color: #343a40;
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.logo h3 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.greeting {
-  font-size: 0.9rem;
-}
-
-.btn-logout {
-  padding: 6px 12px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
-}
-
-.btn-logout:hover {
-  background-color: #c82333;
+.v-app-bar {
+  background: linear-gradient(
+    90deg,
+    #1a237e 0%,
+    #283593 60%,
+    #303f9f 100%
+  ) !important;
 }
 </style>

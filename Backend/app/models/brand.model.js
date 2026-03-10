@@ -1,12 +1,14 @@
 const db = require("../utils/mysql.db");
+const generateId = require("../utils/generate.id");
 
 const Brand = {
   create: async (data) => {
+    const id = generateId();
     const [result] = await db.query(
-      "INSERT INTO brands (name, logo_url) VALUES (?, ?)",
-      [data.name, data.logo_url],
+      "INSERT INTO brands (id, name, logo_url) VALUES (?, ?, ?)",
+      [id, data.name, data.logo_url],
     );
-    return result.insertId;
+    return id;
   },
   getAll: async () => {
     const [rows] = await db.query("SELECT * FROM brands");

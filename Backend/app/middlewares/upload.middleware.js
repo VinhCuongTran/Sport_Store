@@ -18,13 +18,9 @@ const storage = new CloudinaryStorage({
     let folderPath = "sport_store/general";
 
     try {
-      // 1. Xử lý cho Brand
       if (req.originalUrl.includes("/api/brands")) {
         folderPath = "sport_store/brands";
-
-        // Lấy tên thương hiệu từ req.body (nếu có)
         if (req.body.name) {
-          // Chuẩn hóa tên thương hiệu: Xóa dấu tiếng Việt, thay khoảng trắng bằng gạch dưới để URL hợp lệ
           const safeBrandName = req.body.name
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
@@ -33,30 +29,22 @@ const storage = new CloudinaryStorage({
           return {
             folder: folderPath,
             allowed_formats: ["jpg", "png", "jpeg", "webp"],
-            public_id: `${safeBrandName}_Logo`, // Cấu hình đổi tên file ở đây
+            public_id: `${safeBrandName}_Logo`,
           };
         }
-      }
-      // 2. Xử lý cho User
-      else if (req.originalUrl.includes("/api/users")) {
+      } else if (req.originalUrl.includes("/api/users")) {
         folderPath = "sport_store/users";
-
-        // Dùng Regex để tìm ID trong URL
         const match = req.originalUrl.match(/\/api\/users\/(\d+)/);
         if (match) {
           const userId = match[1];
           return {
             folder: folderPath,
             allowed_formats: ["jpg", "png", "jpeg", "webp"],
-            public_id: `avatar_${userId}`, // Cấu hình để Cloudinary đặt tên file là avatar_{id}
+            public_id: `avatar_${userId}`,
           };
         }
-      }
-      // 2. Xử lý cho Product (Tạo thư mục dựa theo Category)
-      else if (req.originalUrl.includes("/api/products")) {
+      } else if (req.originalUrl.includes("/api/products")) {
         let categoryId = req.body.category_id;
-
-        // Nếu là API Update (có ID trên URL) mà người dùng không gửi category_id mới, ta lấy category_id cũ từ DB
         const match = req.originalUrl.match(/\/api\/products\/(\d+)/);
         if (match && !categoryId) {
           const product = await ProductModel.getById(match[1]);
@@ -64,14 +52,11 @@ const storage = new CloudinaryStorage({
         }
 
         if (categoryId) {
-          // Lấy thông tin danh mục hiện tại
           const leafCategory = await CategoryModel.getById(categoryId);
 
           if (leafCategory) {
-            let parentName = "Khac"; // Mặc định nếu không có cha
+            let parentName = "Khac";
             let leafName = leafCategory.name;
-
-            // Nếu danh mục này có cha (có parent_id), đi tìm tên danh mục cha
             if (leafCategory.parent_id) {
               const parentCategory = await CategoryModel.getById(
                 leafCategory.parent_id,
@@ -81,7 +66,6 @@ const storage = new CloudinaryStorage({
               }
             }
 
-            // Gộp lại thành đường dẫn chuẩn: sport_store/products/parentName/leafName
             folderPath = `sport_store/products/${parentName}/${leafName}`;
           } else {
             folderPath = "sport_store/products/Chua_phan_loai";
@@ -92,7 +76,7 @@ const storage = new CloudinaryStorage({
       }
     } catch (error) {
       console.error("Lỗi khi tạo folder Cloudinary:", error);
-      folderPath = "sport_store/error_uploads"; // Đường dẫn dự phòng nếu DB bị lỗi
+      folderPath = "sport_store/error_uploads";
     }
 
     return {

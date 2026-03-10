@@ -1,10 +1,13 @@
 const db = require("../utils/mysql.db");
+const generateId = require("../utils/generate.id");
 
 const User = {
   create: async (data) => {
+    const id = generateId();
     const [result] = await db.query(
-      "INSERT INTO users (name, email, phone_number, password, gender, avatar, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO users (id, name, email, phone_number, password, gender, avatar, role, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
+        id,
         data.name,
         data.email,
         data.phone_number || null,
@@ -15,7 +18,7 @@ const User = {
         data.status || "active",
       ],
     );
-    return result.insertId;
+    return id;
   },
 
   getAll: async () => {

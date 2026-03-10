@@ -19,6 +19,10 @@ const config = {
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
   },
+  email: {
+    ACCOUNT: process.env.APP_ACCOUNT,
+    pass: process.env.APP_PASS,
+  },
 };
 
 module.exports = config;
