@@ -139,6 +139,18 @@ const OrderController = {
 
     res.json({ message: "Cập nhật trạng thái đơn hàng thành công" });
   }),
+
+  cancelOrder: asyncHandler(async (req, res) => {
+    const orderId = req.params.id;
+    const userId = req.user.id; 
+
+    try {
+      await OrderModel.cancelOrder(orderId, userId);
+      res.json({ message: "Hủy đơn hàng thành công" });
+    } catch (error) {
+      throw new ApiError(400, error.message || "Không thể hủy đơn hàng này");
+    }
+  }),
 };
 
 module.exports = OrderController;

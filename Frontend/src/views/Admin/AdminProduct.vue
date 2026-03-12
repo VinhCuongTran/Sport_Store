@@ -399,17 +399,115 @@
                   >
                   Phân loại (Màu sắc & Kích cỡ)
                 </h4>
-                <v-btn
-                  color="indigo-darken-1"
-                  size="small"
-                  variant="elevated"
-                  prepend-icon="mdi-plus"
-                  class="text-capitalize"
-                  @click="addColorGroup"
-                >
-                  Thêm Màu Sắc Mới
-                </v-btn>
+                <div class="d-flex gap-2">
+                  <v-btn
+                    color="teal-darken-2"
+                    size="small"
+                    variant="tonal"
+                    prepend-icon="mdi-flash"
+                    class="text-capitalize"
+                    @click="showQuickSetup = !showQuickSetup"
+                  >
+                    Tạo Nhanh Size
+                  </v-btn>
+                  <v-btn
+                    color="indigo-darken-1"
+                    size="small"
+                    variant="elevated"
+                    prepend-icon="mdi-plus"
+                    class="text-capitalize"
+                    @click="addColorGroup"
+                  >
+                    Thêm Màu Sắc Mới
+                  </v-btn>
+                </div>
               </div>
+
+              <v-expand-transition>
+                <div
+                  v-if="showQuickSetup"
+                  class="bg-teal-lighten-5 pa-4 rounded-lg border border-teal-lighten-3 mb-4"
+                >
+                  <div class="d-flex justify-space-between align-center mb-3">
+                    <span class="font-weight-bold text-teal-darken-4">
+                      <v-icon size="18" class="mr-1">mdi-auto-fix</v-icon>
+                      Tạo nhanh danh sách Size cho 1 Màu
+                    </span>
+                    <v-btn
+                      icon="mdi-close"
+                      variant="text"
+                      size="small"
+                      color="teal-darken-4"
+                      @click="showQuickSetup = false"
+                    ></v-btn>
+                  </div>
+                  <v-row>
+                    <v-col cols="12" md="3" class="py-1">
+                      <label
+                        class="text-caption font-weight-bold text-teal-darken-3 mb-1 d-block"
+                        >Bộ Size mẫu</label
+                      >
+                      <select
+                        v-model="quickSetup.category"
+                        class="custom-input text-black border-teal"
+                      >
+                        <option value="shoes">Giày (US 3.5 - US 9)</option>
+                        <option value="clothes">Quần Áo (XS - XXL)</option>
+                        <option value="gloves">Găng tay (4 - 12)</option>
+                        <option value="phao">Phao (2-12)</option>
+                        <option value="accessories">
+                          Phụ kiện (Free Size)
+                        </option>
+                      </select>
+                    </v-col>
+                    <v-col cols="12" md="3" class="py-1">
+                      <label
+                        class="text-caption font-weight-bold text-teal-darken-3 mb-1 d-block"
+                        >Màu sắc (VD: Đen)</label
+                      >
+                      <input
+                        v-model="quickSetup.color"
+                        type="text"
+                        class="custom-input text-black border-teal"
+                        placeholder="Nhập tên màu..."
+                      />
+                    </v-col>
+                    <v-col cols="12" md="3" class="py-1">
+                      <label
+                        class="text-caption font-weight-bold text-teal-darken-3 mb-1 d-block"
+                        >Giá bán chung</label
+                      >
+                      <input
+                        v-model.number="quickSetup.price"
+                        type="number"
+                        class="custom-input text-black border-teal"
+                        placeholder="0"
+                      />
+                    </v-col>
+                    <v-col cols="12" md="3" class="py-1">
+                      <label
+                        class="text-caption font-weight-bold text-teal-darken-3 mb-1 d-block"
+                        >Tồn kho chung</label
+                      >
+                      <input
+                        v-model.number="quickSetup.stock"
+                        type="number"
+                        class="custom-input text-black border-teal"
+                        placeholder="0"
+                      />
+                    </v-col>
+                  </v-row>
+                  <div class="text-right mt-3">
+                    <v-btn
+                      color="teal-darken-3"
+                      class="text-capitalize"
+                      @click="generateVariants"
+                    >
+                      Áp dụng & Tạo danh sách
+                    </v-btn>
+                  </div>
+                </div>
+              </v-expand-transition>
 
               <div
                 v-for="(group, gIndex) in colorGroups"
@@ -456,6 +554,7 @@
                   <input
                     type="file"
                     @change="(e) => handleColorFileChange(e, gIndex)"
+                    @click="(e) => (e.target.value = null)"
                     accept="image/*"
                     multiple
                     class="custom-input text-black file-input mb-1 bg-grey-lighten-4"
@@ -681,6 +780,84 @@ const isEditMode = ref(false);
 const confirmDialogRef = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
 
+// === KHAI BÁO LOGIC TẠO NHANH ===
+const showQuickSetup = ref(false);
+const quickSetup = ref({
+  category: "shoes",
+  color: "",
+  price: null,
+  stock: null,
+});
+const sizePresets = {
+  shoes: [
+    "US 3.5",
+    "US 4",
+    "US 4.5",
+    "US 5",
+    "US 5.5",
+    "US 6",
+    "US 6.5",
+    "US 7",
+    "US 7.5",
+    "US 8",
+    "US 8.5",
+    "US 9",
+  ],
+  clothes: ["XS", "S", "M", "L", "XL", "XXL"],
+  accessories: ["Free Size"],
+  gloves: [4, 5, 6, 7, 8, 9, 10, 11, 12],
+  phao: ["2-6yrs", "7-12yrs"],
+};
+
+const generateVariants = () => {
+  if (!quickSetup.value.color) {
+    showMessage("Vui lòng nhập tên màu sắc", "error");
+    return;
+  }
+
+  const selectedSizes = sizePresets[quickSetup.value.category];
+  if (!selectedSizes) return;
+
+  let targetGroup = colorGroups.value.find(
+    (g) => g.color.toLowerCase() === quickSetup.value.color.toLowerCase(),
+  );
+
+  if (!targetGroup) {
+    targetGroup = {
+      color: quickSetup.value.color,
+      sizes: [],
+      files: [],
+    };
+    colorGroups.value.push(targetGroup);
+  } else {
+    if (targetGroup.sizes.length === 1 && !targetGroup.sizes[0].size) {
+      targetGroup.sizes = [];
+    }
+  }
+
+  let addedCount = 0;
+  selectedSizes.forEach((sizeStr) => {
+    if (!targetGroup.sizes.some((s) => s.size === sizeStr)) {
+      targetGroup.sizes.push({
+        size: sizeStr,
+        price: quickSetup.value.price,
+        stock: quickSetup.value.stock,
+      });
+      addedCount++;
+    }
+  });
+
+  if (addedCount > 0) {
+    showMessage(`Đã tạo nhanh ${addedCount} size cho màu ${targetGroup.color}`);
+    showQuickSetup.value = false;
+  } else {
+    showMessage(
+      `Các size này đã tồn tại trong màu ${targetGroup.color}`,
+      "warning",
+    );
+  }
+};
+
 const sizeWeight = {
   XXS: 1,
   XS: 2,
@@ -761,7 +938,7 @@ const formData = ref({
   category_id: null,
   brand_id: null,
   status: "active",
-  discount_percent: 0,
+  discount_percent: null,
   sale_start: "",
   sale_end: "",
 });
@@ -862,6 +1039,7 @@ const cleanupPreviews = () => {
 
 const openCreateModal = () => {
   isEditMode.value = false;
+
   formData.value = {
     id: null,
     name: "",
@@ -869,10 +1047,19 @@ const openCreateModal = () => {
     category_id: null,
     brand_id: null,
     status: "active",
-    discount_percent: 0,
+    discount_percent: null,
     sale_start: "",
     sale_end: "",
   };
+
+  quickSetup.value = {
+    category: "shoes",
+    color: "",
+    price: null,
+    stock: null,
+  };
+  showQuickSetup.value = false;
+
   cleanupPreviews();
   colorGroups.value = [];
   showModal.value = true;
@@ -880,6 +1067,8 @@ const openCreateModal = () => {
 
 const openEditModal = async (id) => {
   isLoading.value = true;
+  showQuickSetup.value = false;
+
   try {
     const productDetail = await ProductService.get(id);
     isEditMode.value = true;
@@ -891,7 +1080,7 @@ const openEditModal = async (id) => {
       category_id: productDetail.category_id,
       brand_id: productDetail.brand_id,
       status: productDetail.status,
-      discount_percent: productDetail.discount_percent || 0,
+      discount_percent: productDetail.discount_percent || null,
       sale_start: formatForInput(productDetail.sale_start),
       sale_end: formatForInput(productDetail.sale_end),
     };
@@ -932,7 +1121,7 @@ const closeModal = () => {
 const addColorGroup = () => {
   colorGroups.value.push({
     color: "",
-    sizes: [{ size: "", price: 0, stock: 0 }],
+    sizes: [{ size: "", price: null, stock: null }],
     files: [],
   });
 };
@@ -948,7 +1137,11 @@ const removeColorGroup = (index) => {
 };
 
 const addSizeToColor = (groupIndex) => {
-  colorGroups.value[groupIndex].sizes.push({ size: "", price: 0, stock: 0 });
+  colorGroups.value[groupIndex].sizes.push({
+    size: "",
+    price: null,
+    stock: null,
+  });
 };
 
 const removeSizeFromColor = (groupIndex, sizeIndex) => {
@@ -986,9 +1179,6 @@ const handleColorFileChange = (event, groupIndex) => {
     preview: URL.createObjectURL(file),
     is_thumbnail: false,
   }));
-
-  event.target.value = "";
-
   checkAndSetDefaultThumbnail();
 };
 
@@ -1135,6 +1325,14 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.border-teal {
+  border-color: #4db6ac !important;
+}
+.border-teal:focus {
+  border-color: #00796b !important;
+  box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12) !important;
+}
+
 .custom-input {
   width: 100%;
   padding: 8px 12px;

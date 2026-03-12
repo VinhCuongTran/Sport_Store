@@ -27,12 +27,39 @@
             <div
               class="main-image-container position-relative bg-grey-lighten-4 rounded-0 mb-4 border border-grey-lighten-3"
             >
-              <v-img
-                :src="mainImage"
-                aspect-ratio="1"
-                cover
-                class="main-image"
-              ></v-img>
+              <div
+                class="w-100 h-100 cursor-pointer"
+                @click="showImageDialog = true"
+                title="Nhấn để phóng to"
+              >
+                <v-img
+                  :src="mainImage"
+                  aspect-ratio="1"
+                  cover
+                  class="main-image"
+                ></v-img>
+              </div>
+
+              <v-btn
+                v-if="currentGallery.length > 1"
+                icon="mdi-chevron-left"
+                variant="flat"
+                color="white"
+                class="nav-arrow left-arrow"
+                size="small"
+                @click.stop="prevImage"
+              ></v-btn>
+
+              <v-btn
+                v-if="currentGallery.length > 1"
+                icon="mdi-chevron-right"
+                variant="flat"
+                color="white"
+                class="nav-arrow right-arrow"
+                size="small"
+                @click.stop="nextImage"
+              ></v-btn>
+
               <div
                 v-if="product.active_discount > 0"
                 class="discount-badge bg-red text-white text-caption font-weight-bold px-3 py-1"
@@ -143,10 +170,13 @@
               <div class="d-flex justify-space-between align-center mb-3">
                 <span class="text-body-1">Kích Thước</span>
                 <a
+                  v-if="currentSizeGuideImg !== defaultSizeGuide"
                   href="#"
-                  class="text-caption text-decoration-underline text-grey-darken-2"
-                  >Bảng kích thước</a
+                  @click.prevent="showSizeGuideDialog = true"
+                  class="text-caption text-decoration-underline text-grey-darken-2 cursor-pointer"
                 >
+                  Bảng kích thước
+                </a>
               </div>
               <div class="size-grid">
                 <v-btn
@@ -308,7 +338,7 @@
           <v-tab
             value="tab-5"
             class="text-subtitle-1 font-weight-bold tracking-wide"
-            >VỀ CHÚNG TỐI</v-tab
+            >VỀ CHÚNG TÔI</v-tab
           >
         </v-tabs>
 
@@ -326,19 +356,6 @@
                   SẢN PHẨM CHÍNH HÃNG
                 </h4>
                 <p class="mb-4">Thông tin mô tả sản phẩm đang được cập nhật.</p>
-              </div>
-
-              <div class="mt-12 text-center pt-8">
-                <v-divider class="mb-8 border-opacity-25"></v-divider>
-                <h4 class="text-h6 font-weight-bold mb-4 text-uppercase">
-                  Bảng Hướng Dẫn Chọn Size
-                </h4>
-                <v-img
-                  :src="sizeGuideImg"
-                  alt="Hướng dẫn chọn size giày"
-                  class="mx-auto rounded-lg"
-                  max-width="800"
-                ></v-img>
               </div>
             </div>
           </v-window-item>
@@ -624,6 +641,93 @@
         {{ snackbar.text }}
       </div>
     </v-snackbar>
+
+    <v-dialog v-model="showSizeGuideDialog" max-width="800px">
+      <v-card class="rounded-lg">
+        <v-card-title
+          class="d-flex justify-space-between align-center pa-4 border-b"
+        >
+          <span class="text-h6 font-weight-bold text-uppercase"
+            >Bảng Hướng Dẫn Chọn Size</span
+          >
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            density="compact"
+            @click="showSizeGuideDialog = false"
+          ></v-btn>
+        </v-card-title>
+
+        <v-card-text class="pa-4 bg-grey-lighten-4">
+          <v-img
+            :src="currentSizeGuideImg"
+            alt="Bảng hướng dẫn chọn size"
+            class="mx-auto rounded"
+          ></v-img>
+        </v-card-text>
+
+        <v-card-actions class="pa-4 justify-center bg-white">
+          <v-btn
+            color="black"
+            variant="outlined"
+            class="px-8 font-weight-bold"
+            @click="showSizeGuideDialog = false"
+          >
+            ĐÓNG
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="showImageDialog" max-width="1000px">
+      <v-card class="bg-black position-relative rounded-lg overflow-hidden">
+        <div class="position-absolute right-0 top-0 pa-4" style="z-index: 10">
+          <v-btn
+            icon="mdi-close"
+            variant="flat"
+            color="grey-darken-3"
+            size="small"
+            @click="showImageDialog = false"
+          ></v-btn>
+        </div>
+
+        <v-carousel
+          v-model="selectedImageIndex"
+          hide-delimiters
+          show-arrows="always"
+          theme="dark"
+          height="85vh"
+        >
+          <template v-slot:prev="{ props }">
+            <v-btn
+              icon="mdi-chevron-left"
+              variant="elevated"
+              color="white"
+              class="text-black"
+              @click="props.onClick"
+            ></v-btn>
+          </template>
+
+          <template v-slot:next="{ props }">
+            <v-btn
+              icon="mdi-chevron-right"
+              variant="elevated"
+              color="white"
+              class="text-black"
+              @click="props.onClick"
+            ></v-btn>
+          </template>
+
+          <v-carousel-item
+            v-for="(img, i) in currentGallery"
+            :key="i"
+            :value="i"
+          >
+            <v-img :src="img" contain class="h-100 w-100"></v-img>
+          </v-carousel-item>
+        </v-carousel>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -634,8 +738,6 @@ import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
 import ReviewService from "@/services/review.service";
 import ProductCard from "@/components/ProductCard.vue";
-
-import sizeGuideImg from "@/assets/Shoe_size_guide.jpg";
 
 const route = useRoute();
 const router = useRouter();
@@ -655,6 +757,9 @@ const selectedSize = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
 const activeTabBottom = ref("tab-1");
 
+const showSizeGuideDialog = ref(false);
+const showImageDialog = ref(false);
+
 const currentGallery = ref([]);
 
 const sizeWeight = {
@@ -668,6 +773,40 @@ const sizeWeight = {
   "2XL": 7,
   "3XL": 8,
 };
+
+import shoeSizeGuide from "@/assets/Shoe_size_guide.jpg";
+import BadmintonRacketSizeGuide from "@/assets/Badminton_Racket_Guide.webp";
+import Basketball_Ball_Size_Guide from "@/assets/Basketball_Ball_Size_Guide.png";
+import Basketball_Cap_Size_Guide from "@/assets/Basketball_Cap_Size_Guide.jpg";
+import clothesSizeGuide from "@/assets/Clothes_Size_Guide.png";
+import Football_Goalkeeper_Size_Guide from "@/assets/Football_Goalkeeper_Size_Guide.png";
+
+const currentSizeGuideImg = computed(() => {
+  if (!product.value) return defaultSizeGuide;
+
+  const category = (product.value.category_name || "").toLowerCase();
+  const parentCategory = (
+    product.value.parent_category_name || ""
+  ).toLowerCase();
+  const fullCategory = `${category} ${parentCategory}`;
+
+  switch (true) {
+    case fullCategory.includes("giày"):
+      return shoeSizeGuide;
+    case fullCategory.includes("vợt cầu lông"):
+      return BadmintonRacketSizeGuide;
+    case fullCategory.includes("găng tay thủ môn"):
+      return Football_Goalkeeper_Size_Guide;
+    case fullCategory.includes("đồng phục"):
+      return clothesSizeGuide;
+    case fullCategory.includes("mũ bóng rổ"):
+      return Basketball_Cap_Size_Guide;
+    case fullCategory.includes("bóng"):
+      return Basketball_Ball_Size_Guide;
+    default:
+      return;
+  }
+});
 
 const sortSizes = (a, b) => {
   const valA =
@@ -695,6 +834,34 @@ const sortSizes = (a, b) => {
   }
   return valA.localeCompare(valB);
 };
+
+// --- LOGIC CHUYỂN ẢNH ---
+const prevImage = () => {
+  if (currentGallery.value.length <= 1) return;
+  let newIndex = selectedImageIndex.value - 1;
+  if (newIndex < 0) {
+    newIndex = currentGallery.value.length - 1;
+  }
+  setMainImage(currentGallery.value[newIndex], newIndex);
+};
+
+const nextImage = () => {
+  if (currentGallery.value.length <= 1) return;
+  let newIndex = selectedImageIndex.value + 1;
+  if (newIndex >= currentGallery.value.length) {
+    newIndex = 0;
+  }
+  setMainImage(currentGallery.value[newIndex], newIndex);
+};
+
+watch(selectedImageIndex, (newVal) => {
+  if (
+    currentGallery.value[newVal] &&
+    mainImage.value !== currentGallery.value[newVal]
+  ) {
+    mainImage.value = currentGallery.value[newVal];
+  }
+});
 
 const fetchProductDetail = async () => {
   isLoading.value = true;
@@ -953,7 +1120,6 @@ watch(
   letter-spacing: 0.05em !important;
 }
 
-/* Hình ảnh Gallery */
 .main-image-container {
   overflow: hidden;
 }
@@ -975,7 +1141,27 @@ watch(
   opacity: 1;
 }
 
-/* Swatch MÀU SẮC */
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  z-index: 2;
+}
+.nav-arrow:hover {
+  opacity: 1;
+}
+.left-arrow {
+  left: 10px;
+}
+.right-arrow {
+  right: 10px;
+}
+.cursor-pointer {
+  cursor: pointer;
+}
+
 .custom-variant {
   display: flex;
   gap: 10px;

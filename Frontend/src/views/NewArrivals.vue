@@ -33,18 +33,31 @@
             ></v-progress-circular>
           </div>
 
-          <v-row v-else-if="newProducts.length > 0">
-            <v-col
-              v-for="product in newProducts"
-              :key="product.id"
-              cols="12"
-              sm="6"
-              md="3"
-              lg="3"
-            >
-              <ProductCard :product="product" />
-            </v-col>
-          </v-row>
+          <div v-else-if="newProducts.length > 0">
+            <v-row>
+              <v-col
+                v-for="product in paginatedProducts"
+                :key="product.id"
+                cols="12"
+                sm="6"
+                md="3"
+                lg="3"
+              >
+                <ProductCard :product="product" />
+              </v-col>
+            </v-row>
+
+            <div class="d-flex justify-center mt-12 mb-4" v-if="totalPages > 1">
+              <v-pagination
+                v-model="page"
+                :length="totalPages"
+                color="black"
+                rounded="circle"
+                :total-visible="7"
+                @update:modelValue="scrollToTop"
+              ></v-pagination>
+            </div>
+          </div>
 
           <v-card
             v-else
@@ -67,12 +80,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import ProductService from "@/services/product.service";
 import ProductCard from "@/components/ProductCard.vue";
 
 const isLoading = ref(true);
 const newProducts = ref([]);
+
+const page = ref(1);
+const itemsPerPage = 16;
+
+const totalPages = computed(() => {
+  return Math.ceil(newProducts.value.length / itemsPerPage);
+});
+
+const paginatedProducts = computed(() => {
+  const start = (page.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return newProducts.value.slice(start, end);
+});
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 const fetchNewArrivals = async () => {
   isLoading.value = true;
@@ -80,8 +110,7 @@ const fetchNewArrivals = async () => {
     const productsData = await ProductService.getAll();
     newProducts.value = productsData
       .filter((p) => p.status === "active")
-      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-      .slice(0, 24);
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
   } catch (error) {
     console.error("Lỗi khi tải dữ liệu hàng mới về:", error);
   } finally {

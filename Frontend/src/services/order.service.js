@@ -16,6 +16,9 @@ class OrderService {
   async create(data) {
     return (await api.post("/orders", data)).data;
   }
+  async cancel(id) {
+    return (await api.put(`/orders/${id}/cancel`)).data;
+  }
 }
 
 export default new OrderService();

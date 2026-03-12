@@ -52,21 +52,23 @@ const storage = new CloudinaryStorage({
         }
 
         if (categoryId) {
-          const leafCategory = await CategoryModel.getById(categoryId);
+          let currentCategoryId = categoryId;
+          const pathParts = [];
+          let depth = 0;
+          while (currentCategoryId && depth < 10) {
+            const category = await CategoryModel.getById(currentCategoryId);
 
-          if (leafCategory) {
-            let parentName = "Khac";
-            let leafName = leafCategory.name;
-            if (leafCategory.parent_id) {
-              const parentCategory = await CategoryModel.getById(
-                leafCategory.parent_id,
-              );
-              if (parentCategory) {
-                parentName = parentCategory.name;
-              }
-            }
+            if (!category) break;
 
-            folderPath = `sport_store/products/${parentName}/${leafName}`;
+            pathParts.unshift(category.name);
+
+            currentCategoryId = category.parent_id;
+            depth++;
+          }
+
+          if (pathParts.length > 0) {
+            const categoryPath = pathParts.join("/");
+            folderPath = `sport_store/products/${categoryPath}`;
           } else {
             folderPath = "sport_store/products/Chua_phan_loai";
           }

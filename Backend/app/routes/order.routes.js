@@ -15,5 +15,6 @@ router.put(
 );
 router.get("/", verifyToken, isAdminOrStaff, orderController.getAllOrders);
 router.get("/:id", verifyToken, orderController.getOrderById);
+router.put("/:id/cancel", verifyToken, orderController.cancelOrder);
 
 module.exports = router;

@@ -148,6 +148,13 @@
             </div>
             <div class="d-flex gap-2">
               <v-btn
+                v-if="order.status === 'pending'"
+                variant="outlined"
+                color="error"
+                @click="cancelOrder(order.id)"
+              >Hủy Đơn</v-btn>
+
+              <v-btn
                 variant="outlined"
                 color="black"
                 @click="viewDetail(order.id)"
@@ -406,6 +413,30 @@ const submitReview = async () => {
     );
   } finally {
     isSubmittingReview.value = false;
+  }
+};
+
+const cancelOrder = async (orderId) => {
+  const isConfirmed = confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${orderId} không?`);
+  
+  if (isConfirmed) {
+    isLoading.value = true;
+    try {
+      await OrderService.cancel(orderId);
+      confirmDialog.value.open("Thành công", "Đã hủy đơn hàng.", {
+        isAlert: true,
+      });
+      await fetchOrders();
+    } catch (error) {
+      console.error(error);
+      confirmDialog.value.open(
+        "Lỗi", 
+        error.response?.data?.message || "Không thể hủy đơn hàng lúc này.", 
+        { isAlert: true, iconColor: "red" }
+      );
+    } finally {
+      isLoading.value = false;
+    }
   }
 };
 

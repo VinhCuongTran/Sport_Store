@@ -39,18 +39,31 @@
             ></v-progress-circular>
           </div>
 
-          <v-row v-else-if="filteredProducts.length > 0">
-            <v-col
-              v-for="product in filteredProducts"
-              :key="product.id"
-              cols="12"
-              sm="6"
-              md="3"
-              lg="3"
-            >
-              <ProductCard :product="product" />
-            </v-col>
-          </v-row>
+          <div v-else-if="filteredProducts.length > 0">
+            <v-row>
+              <v-col
+                v-for="product in paginatedProducts"
+                :key="product.id"
+                cols="12"
+                sm="6"
+                md="3"
+                lg="3"
+              >
+                <ProductCard :product="product" />
+              </v-col>
+            </v-row>
+
+            <div class="d-flex justify-center mt-12 mb-4" v-if="totalPages > 1">
+              <v-pagination
+                v-model="page"
+                :length="totalPages"
+                color="black"
+                rounded="circle"
+                :total-visible="7"
+                @update:modelValue="scrollToTop"
+              ></v-pagination>
+            </div>
+          </div>
 
           <v-card
             v-else
@@ -71,8 +84,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, onMounted, computed, watch, nextTick } from "vue";
+import { useRoute, useRouter, onBeforeRouteLeave } from "vue-router";
 import ProductService from "@/services/product.service";
 import CategoryService from "@/services/category.service";
 import ProductCard from "@/components/ProductCard.vue";
@@ -89,6 +102,14 @@ const selectedBrand = ref(route.query.brand || null);
 const selectedSport = ref(route.query.sport || null);
 const searchQuery = ref(route.query.search || "");
 
+const page = ref(1);
+const itemsPerPage = 16;
+
+onBeforeRouteLeave((to, from, next) => {
+  sessionStorage.setItem("productsScrollPos", window.scrollY);
+  next();
+});
+
 const fetchData = async () => {
   isLoading.value = true;
   try {
@@ -103,6 +124,23 @@ const fetchData = async () => {
     console.error("Lỗi khi tải dữ liệu sản phẩm:", error);
   } finally {
     isLoading.value = false;
+
+    nextTick(() => {
+      const savedPosition = sessionStorage.getItem("productsScrollPos");
+
+      if (savedPosition) {
+        const targetScroll = parseInt(savedPosition);
+
+        setTimeout(() => {
+          window.scrollTo({ top: targetScroll, behavior: "instant" });
+        }, 100);
+
+        setTimeout(() => {
+          window.scrollTo({ top: targetScroll, behavior: "instant" });
+          sessionStorage.removeItem("productsScrollPos");
+        }, 500);
+      }
+    });
   }
 };
 
@@ -113,6 +151,7 @@ watch(
     selectedBrand.value = newQuery.brand || null;
     selectedSport.value = newQuery.sport || null;
     searchQuery.value = newQuery.search || "";
+    page.value = 1;
   },
 );
 
@@ -145,6 +184,20 @@ const filteredProducts = computed(() => {
 
   return result;
 });
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredProducts.value.length / itemsPerPage);
+});
+
+const paginatedProducts = computed(() => {
+  const start = (page.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filteredProducts.value.slice(start, end);
+});
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 const clearFilters = () => {
   router.push({ path: "/products" });

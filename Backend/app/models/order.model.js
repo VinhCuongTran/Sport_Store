@@ -110,6 +110,61 @@ const Order = {
     );
     return result.affectedRows > 0;
   },
+
+  cancelOrder: async (id, userId) => {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [orders] = await connection.query(
+        `SELECT * FROM orders WHERE id = ? AND user_id = ? FOR UPDATE`,
+        [id, userId]
+      );
+      
+      if (orders.length === 0) {
+        throw new Error("Không tìm thấy đơn hàng hoặc bạn không có quyền hủy.");
+      }
+      
+      const order = orders[0];
+      if (order.status !== 'pending') {
+        throw new Error("Chỉ có thể hủy đơn hàng đang chờ xác nhận.");
+      }
+
+      await connection.query(
+        `UPDATE orders SET status = 'cancelled' WHERE id = ?`,
+        [id]
+      );
+
+      const [items] = await connection.query(
+        `SELECT variant_id, quantity FROM order_items WHERE order_id = ?`,
+        [id]
+      );
+      
+      for (const item of items) {
+        if (item.variant_id) {
+          await connection.query(
+            `UPDATE product_variants SET stock = stock + ? WHERE id = ?`,
+            [item.quantity, item.variant_id]
+          );
+        }
+      }
+
+      if (order.voucher_id) {
+        await connection.query(
+          `UPDATE vouchers SET used_count = used_count - 1 WHERE id = ? AND used_count > 0`,
+          [order.voucher_id]
+        );
+      }
+
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  },
 };
 
 module.exports = Order;
