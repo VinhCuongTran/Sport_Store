@@ -210,6 +210,12 @@ const getProductsForFilter = (excludeFilter = null) => {
       return searchTerms.every((term) => productName.includes(term));
     });
   }
+  if (selectedSport.value) {
+    const sportCategoryIds = categories.value
+      .filter((c) => c.sport_id === selectedSport.value)
+      .map((c) => c.id);
+    result = result.filter((p) => sportCategoryIds.includes(p.category_id));
+  }
   if (selectedCategory.value) {
     const childIds = categories.value
       .filter((c) => c.parent_id === selectedCategory.value)
