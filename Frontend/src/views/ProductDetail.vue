@@ -812,7 +812,6 @@ const quantity = ref(1);
 
 const availableVouchers = computed(() => {
   const vouchers = product.value?.available_vouchers || [];
-  // Lọc voucher hợp lệ với giá hiện tại
   return vouchers.filter((v) => {
     const minOrder = Number(v.min_order_value) || 0;
     return currentOriginalPrice.value >= minOrder;
@@ -939,7 +938,6 @@ const sortSizes = (a, b) => {
   return valA.localeCompare(valB);
 };
 
-// --- LOGIC CHUYỂN ẢNH ---
 const prevImage = () => {
   if (currentGallery.value.length <= 1) return;
   let newIndex = selectedImageIndex.value - 1;
@@ -967,7 +965,6 @@ watch(selectedImageIndex, (newVal) => {
   }
 });
 
-// Sửa lại một chút trong hàm fetchProductDetail()
 const fetchProductDetail = async () => {
   isLoading.value = true;
   try {
@@ -978,7 +975,6 @@ const fetchProductDetail = async () => {
     if (uniqueColors.value.length > 0) {
       selectColor(uniqueColors.value[0]);
     } else {
-      // Sửa lại điều kiện check is_thumbnail ở đây
       const sortedImages = [...productImages.value].sort((a, b) => {
         const isThumbA = a.is_thumbnail == 1 || a.is_thumbnail === true ? 1 : 0;
         const isThumbB = b.is_thumbnail == 1 || b.is_thumbnail === true ? 1 : 0;
@@ -1006,33 +1002,24 @@ const uniqueColors = computed(() => [
   ...new Set((product.value?.variants || []).map((v) => v.color)),
 ]);
 
-// Thay thế đoạn code tương ứng trong script setup của ProductDetail.vue
-
 const getColorImages = (color) => {
   const allImgs = productImages.value || [];
-
-  // 1. Lọc ảnh theo màu (Xử lý an toàn: bỏ khoảng trắng 2 đầu và đưa về chữ thường)
   const safeColor = color ? String(color).trim().toLowerCase() : "";
   let filtered = allImgs.filter((img) => {
     const imgColor = img.color ? String(img.color).trim().toLowerCase() : "";
     return imgColor === safeColor;
   });
 
-  // 2. Nếu màu này không có ảnh nào, dùng toàn bộ ảnh chung
-  // LƯU Ý: Phải dùng [...allImgs] để clone mảng, tránh làm xáo trộn mảng gốc khi sort
   if (filtered.length === 0) {
     filtered = [...allImgs];
   }
 
-  // 3. Nếu data hoàn toàn không có ảnh
   if (filtered.length === 0) {
     if (product.value?.image_url) return [product.value.image_url];
     if (product.value?.image) return [product.value.image];
     return ["https://placehold.co/600x600?text=No+Image"];
   }
 
-  // 4. Sắp xếp ưu tiên ảnh thumbnail
-  // So sánh lỏng (== 1) để bắt được cả số 1, chuỗi "1", hoặc boolean true
   filtered.sort((a, b) => {
     const isThumbA = a.is_thumbnail == 1 || a.is_thumbnail === true ? 1 : 0;
     const isThumbB = b.is_thumbnail == 1 || b.is_thumbnail === true ? 1 : 0;
@@ -1435,11 +1422,10 @@ watch(
 }
 
 .custom-price-red {
-  font-size: 36px !important; /* Kích thước to hơn card (24px) để phù hợp trang chi tiết */
+  font-size: 36px !important;
   font-weight: 900 !important;
   color: #e53935 !important;
   line-height: 1.2 !important;
-  /* Bỏ text-align: center để giá nằm gọn gàng bên trái theo đúng layout của trang chi tiết */
 }
 
 .breadcrumb-wrapper {
@@ -1448,7 +1434,7 @@ watch(
 }
 
 .breadcrumb-wrapper :deep(.v-breadcrumbs) {
-  flex-wrap: nowrap !important; /* Cấm tự động rớt dòng */
+  flex-wrap: nowrap !important;
   overflow: hidden;
 }
 
@@ -1456,7 +1442,7 @@ watch(
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 250px; /* Bạn có thể tăng/giảm số này để chỉnh độ dài tối đa của 1 mục trước khi bị cắt thành ... */
+  max-width: 250px;
   display: inline-block;
   vertical-align: bottom;
 }

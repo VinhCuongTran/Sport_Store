@@ -78,9 +78,9 @@
         no-data-text="Chưa có đơn hàng nào"
       >
         <template v-slot:item.id="{ item }">
-          <span class="font-weight-black text-indigo-darken-4"
-            >{{ item.id }}</span
-          >
+          <span class="font-weight-black text-indigo-darken-4">{{
+            item.id
+          }}</span>
         </template>
 
         <template v-slot:item.customer="{ item }">

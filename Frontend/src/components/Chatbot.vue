@@ -221,7 +221,6 @@ export default {
 </script>
 
 <style scoped>
-/* ── Variables ─────────────────────────────────────────── */
 :root {
   --primary: #2563eb;
   --primary-light: #3b82f6;
@@ -235,7 +234,6 @@ export default {
   --shadow: 0 20px 60px rgba(37, 99, 235, 0.18), 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* ── Container ─────────────────────────────────────────── */
 .chatbot-container {
   position: fixed;
   bottom: 28px;
@@ -247,7 +245,6 @@ export default {
   gap: 14px;
 }
 
-/* ── Toggle Button ─────────────────────────────────────── */
 .chat-toggle-btn {
   position: relative;
   display: flex;
@@ -314,7 +311,6 @@ export default {
   font-weight: 600;
 }
 
-/* Pulse ring */
 .btn-pulse {
   position: absolute;
   top: 50%;
@@ -340,7 +336,6 @@ export default {
   }
 }
 
-/* ── Chat Window Transition ────────────────────────────── */
 .chat-slide-enter-active {
   animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -369,7 +364,6 @@ export default {
   }
 }
 
-/* ── Chat Window ───────────────────────────────────────── */
 .chat-window {
   width: 420px;
   height: 600px;
@@ -382,7 +376,6 @@ export default {
   border: 1px solid rgba(37, 99, 235, 0.12);
 }
 
-/* ── Header ────────────────────────────────────────────── */
 .chat-header {
   display: flex;
   align-items: center;
@@ -447,7 +440,6 @@ export default {
   letter-spacing: 0.02em;
 }
 
-/* ── Chat Body ─────────────────────────────────────────── */
 .chat-body {
   flex: 1;
   overflow-y: auto;
@@ -470,7 +462,6 @@ export default {
   border-radius: 10px;
 }
 
-/* ── Message Rows ──────────────────────────────────────── */
 .message-wrapper {
   display: flex;
   flex-direction: column;
@@ -498,7 +489,6 @@ export default {
   object-fit: cover;
 }
 
-/* ── Messages ──────────────────────────────────────────── */
 .message {
   max-width: 80%;
   padding: 11px 16px;
@@ -525,7 +515,6 @@ export default {
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
-/* ── Typing Indicator ──────────────────────────────────── */
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -560,7 +549,6 @@ export default {
   }
 }
 
-/* ── Product Carousel ──────────────────────────────────── */
 .product-carousel {
   display: flex;
   gap: 12px;
@@ -693,7 +681,6 @@ export default {
   border-color: #2563eb;
 }
 
-/* ── Footer ────────────────────────────────────────────── */
 .chat-footer {
   padding: 12px 14px 10px;
   background: white;

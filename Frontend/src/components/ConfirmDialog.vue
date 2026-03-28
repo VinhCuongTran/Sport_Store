@@ -57,12 +57,6 @@ const options = ref({});
 
 let resolvePromise = null;
 
-/**
- *
- * @param {String} dialogTitle
- * @param {String} dialogMessage
- * @param {Object} dialogOptions
- */
 const open = (dialogTitle, dialogMessage, dialogOptions = {}) => {
   title.value = dialogTitle;
   message.value = dialogMessage;

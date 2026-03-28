@@ -546,7 +546,10 @@ const handleSave = async () => {
     showMessage("Vui lòng điền đầy đủ Tên và Email!", "error");
     return;
   }
-  if (formData.value.id === currentUser.id && formData.value.status === 'blocked') {
+  if (
+    formData.value.id === currentUser.id &&
+    formData.value.status === "blocked"
+  ) {
     showMessage("Bạn không thể tự khóa tài khoản của chính mình!", "error");
     return;
   }

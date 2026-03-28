@@ -79,11 +79,13 @@
         no-data-text="Chưa có môn thể thao nào"
       >
         <template v-slot:item.id="{ item }">
-          <span class="font-weight-black text-indigo-darken-4">{{ item.id }}</span>
+          <span class="font-weight-black text-indigo-darken-4">{{
+            item.id
+          }}</span>
         </template>
 
         <template v-slot:item.name="{ item }">
-          <div class="d-flex align-center gap-2"> 
+          <div class="d-flex align-center gap-2">
             <span class="text-body-2 font-weight-bold text-black">{{
               item.name
             }}</span>
@@ -209,7 +211,6 @@ const dialog = ref({ show: false, isEdit: false });
 const form = ref({ name: "" });
 const editingId = ref(null);
 
-// ĐÃ XÓA CỘT NGÀY TẠO Ở ĐÂY
 const headers = [
   { title: "ID", key: "id", width: "100px", align: "center" },
   { title: "Tên môn thể thao", key: "name", align: "start" },

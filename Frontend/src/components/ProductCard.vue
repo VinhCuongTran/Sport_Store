@@ -88,7 +88,6 @@ const props = defineProps({
   },
 });
 
-// Logic tính toán 2 giá tương tự ProductDetail
 const originalPrice = computed(() => props.product.min_price || 0);
 
 const discountedPrice = computed(() => {
@@ -139,14 +138,13 @@ const formatPrice = (value) => {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  align-items: center; /* Đưa tất cả giá vào chính giữa (căn giữa theo chiều ngang) */
+  align-items: center;
 }
 
-/* Class tự định nghĩa để ép chữ to ra và có màu đỏ nổi bật */
 .custom-price-red {
-  font-size: 24px !important; /* Bạn có thể tăng số này lên (ví dụ 28px) nếu muốn to hơn nữa */
+  font-size: 24px !important;
   font-weight: 900 !important;
-  color: #e53935 !important; /* Màu đỏ */
+  color: #e53935 !important;
   line-height: 1.2 !important;
   text-align: center !important;
 }

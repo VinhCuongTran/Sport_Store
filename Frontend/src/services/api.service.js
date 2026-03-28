@@ -1,5 +1,4 @@
 import axios from "axios";
-// Không cần import router nữa vì chúng ta sẽ dùng window.location
 
 const commonConfig = {
   headers: {
@@ -26,15 +25,12 @@ api.interceptors.request.use(
   },
 );
 
-// GỘP CHUNG THÀNH 1 INTERCEPTOR DUY NHẤT ĐỂ DỄ KIỂM SOÁT
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
     const originalRequest = error.config;
-
-    // 1. XỬ LÝ LỖI HẾT HẠN TOKEN (401)
     if (
       error.response &&
       error.response.status === 401 &&
@@ -69,7 +65,6 @@ api.interceptors.response.use(
       }
     }
 
-    // 2. XỬ LÝ LỖI BỊ ADMIN KHÓA TÀI KHOẢN (403)
     const errorMessage =
       error.response?.data?.message || error.response?.data || "";
     const errorString = JSON.stringify(
@@ -80,20 +75,12 @@ api.interceptors.response.use(
       error.response?.status === 403 &&
       (errorString.includes("bị khóa") || errorString.includes("bị khoá"))
     ) {
-      // Xóa sạch dữ liệu đăng nhập
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
-
-      // Chuyển hướng cứng về trang đăng nhập kèm cờ nhận diện
       window.location.href = "/login?locked=true";
-
-      // ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT:
-      // Trả về một Promise treo để "nuốt" luôn cái lỗi, component sẽ không bắt được lỗi này nữa -> Không hiện thông báo góc!
       return new Promise(() => {});
     }
-
-    // 3. CÁC LỖI KHÁC
     return Promise.reject(error);
   },
 );

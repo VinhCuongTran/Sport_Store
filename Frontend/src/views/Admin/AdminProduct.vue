@@ -117,9 +117,9 @@
         no-data-text="Không tìm thấy sản phẩm nào"
       >
         <template v-slot:item.id="{ item }">
-          <span class="font-weight-black text-indigo-darken-4"
-            >{{ item.id }}</span
-          >
+          <span class="font-weight-black text-indigo-darken-4">{{
+            item.id
+          }}</span>
         </template>
 
         <template v-slot:item.thumbnail="{ item }">
@@ -834,22 +834,16 @@ const isSuperAdmin = computed(() => AuthService.isSuperAdmin());
 const products = ref([]);
 const categories = ref([]);
 const brands = ref([]);
-
 const search = ref("");
 const filterCategory = ref(null);
 const filterStatus = ref(null);
-
 const showModal = ref(false);
 const isLoading = ref(false);
 const isEditMode = ref(false);
 const confirmDialogRef = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
-
-// Lưu vết ảnh cũ và ID thumbnail cũ
 const deletedImageIds = ref([]);
 const selectedThumbnailId = ref(null);
-
-// === KHAI BÁO LOGIC TẠO NHANH ===
 const showQuickSetup = ref(false);
 const quickSetup = ref({
   category: "shoes",
@@ -1162,7 +1156,7 @@ const openEditModal = async (id) => {
 
     const existingVariants = productDetail.variants || [];
     const existingImages = productDetail.images || [];
-    
+
     const grouped = {};
 
     // Hàm phụ trợ để tìm key bất chấp chữ hoa/thường hoặc khoảng trắng
@@ -1176,19 +1170,18 @@ const openEditModal = async (id) => {
       return colorName ? colorName.trim() : "";
     };
 
-    // 1. Gom nhóm Size theo màu
     existingVariants.forEach((v) => {
       const colorKey = getGroupKey(v.color);
-      
+
       if (!grouped[colorKey]) {
-        grouped[colorKey] = { 
-          color: v.color ? v.color.trim() : "", 
-          sizes: [], 
-          files: [], 
-          existing_images: [] 
+        grouped[colorKey] = {
+          color: v.color ? v.color.trim() : "",
+          sizes: [],
+          files: [],
+          existing_images: [],
         };
       }
-      
+
       grouped[colorKey].sizes.push({
         id: v.id,
         size: v.size,
@@ -1197,27 +1190,25 @@ const openEditModal = async (id) => {
       });
     });
 
-    // 2. Map existing images vào group tương ứng (đã chuẩn hóa key)
-    existingImages.forEach(img => {
+    existingImages.forEach((img) => {
       const colorKey = getGroupKey(img.color);
-      
+
       if (!grouped[colorKey]) {
-        grouped[colorKey] = { 
-          color: img.color ? img.color.trim() : "", 
-          sizes: [], 
-          files: [], 
-          existing_images: [] 
+        grouped[colorKey] = {
+          color: img.color ? img.color.trim() : "",
+          sizes: [],
+          files: [],
+          existing_images: [],
         };
       }
-      
+
       grouped[colorKey].existing_images.push({
         id: img.id,
         url: img.image_url,
-        is_thumbnail: img.is_thumbnail == 1 || img.is_thumbnail === true
+        is_thumbnail: img.is_thumbnail == 1 || img.is_thumbnail === true,
       });
     });
 
-    // 3. Sắp xếp lại thứ tự size
     Object.values(grouped).forEach((group) => {
       group.sizes.sort(sortSizes);
     });
@@ -1251,7 +1242,6 @@ const removeColorGroup = (index) => {
       URL.revokeObjectURL(f.preview),
     );
   }
-  // Ghi nhận các ảnh cũ trong màu này để xóa
   if (colorGroups.value[index].existing_images) {
     colorGroups.value[index].existing_images.forEach((img) => {
       deletedImageIds.value.push(img.id);
@@ -1272,7 +1262,6 @@ const removeSizeFromColor = (groupIndex, sizeIndex) => {
   colorGroups.value[groupIndex].sizes.splice(sizeIndex, 1);
 };
 
-// Hàm loại bỏ trạng thái Thumbnail của TOÀN BỘ ảnh
 const resetAllThumbnails = () => {
   colorGroups.value.forEach((group) => {
     if (group.files) group.files.forEach((f) => (f.is_thumbnail = false));
@@ -1281,14 +1270,12 @@ const resetAllThumbnails = () => {
   });
 };
 
-// Xóa ảnh cũ
 const removeExistingImage = (groupIndex, imgIndex) => {
   const img = colorGroups.value[groupIndex].existing_images[imgIndex];
   deletedImageIds.value.push(img.id);
   colorGroups.value[groupIndex].existing_images.splice(imgIndex, 1);
 };
 
-// Đặt ảnh CŨ làm thumbnail
 const setExistingThumbnail = (groupIndex, imgIndex) => {
   resetAllThumbnails();
   const img = colorGroups.value[groupIndex].existing_images[imgIndex];
@@ -1298,7 +1285,6 @@ const setExistingThumbnail = (groupIndex, imgIndex) => {
 
 const handleColorFileChange = (event, groupIndex) => {
   const selectedFiles = Array.from(event.target.files);
-  // Không xóa file cũ upload trong lần này, mà push thêm vào
   const newFilesMapped = selectedFiles.map((file) => ({
     file: file,
     preview: URL.createObjectURL(file),
@@ -1311,11 +1297,10 @@ const handleColorFileChange = (event, groupIndex) => {
   colorGroups.value[groupIndex].files.push(...newFilesMapped);
 };
 
-// Đặt ảnh MỚI upload làm thumbnail
 const setThumbnail = (groupIndex, fileIndex) => {
   resetAllThumbnails();
   colorGroups.value[groupIndex].files[fileIndex].is_thumbnail = true;
-  selectedThumbnailId.value = null; // Reset id ảnh cũ vì đã chọn ảnh mới
+  selectedThumbnailId.value = null;
 };
 
 const removeFile = (groupIndex, fileIndex) => {
@@ -1431,7 +1416,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Các style cũ được giữ nguyên... */
 .border-teal {
   border-color: #4db6ac !important;
 }

@@ -152,7 +152,8 @@
                 variant="outlined"
                 color="error"
                 @click="cancelOrder(order.id)"
-              >Hủy Đơn</v-btn>
+                >Hủy Đơn</v-btn
+              >
 
               <v-btn
                 variant="outlined"
@@ -417,8 +418,10 @@ const submitReview = async () => {
 };
 
 const cancelOrder = async (orderId) => {
-  const isConfirmed = confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${orderId} không?`);
-  
+  const isConfirmed = confirm(
+    `Bạn có chắc chắn muốn hủy đơn hàng #${orderId} không?`,
+  );
+
   if (isConfirmed) {
     isLoading.value = true;
     try {
@@ -430,9 +433,9 @@ const cancelOrder = async (orderId) => {
     } catch (error) {
       console.error(error);
       confirmDialog.value.open(
-        "Lỗi", 
-        error.response?.data?.message || "Không thể hủy đơn hàng lúc này.", 
-        { isAlert: true, iconColor: "red" }
+        "Lỗi",
+        error.response?.data?.message || "Không thể hủy đơn hàng lúc này.",
+        { isAlert: true, iconColor: "red" },
       );
     } finally {
       isLoading.value = false;

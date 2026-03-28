@@ -225,7 +225,6 @@ const props = defineProps({
   maxPriceLimit: { type: Number, default: 10000000 },
   hasActiveSidebarFilters: { type: Boolean, default: false },
 
-  // v-model props
   activePanels: { type: Array, default: () => [] },
   priceRange: { type: Array, default: () => [0, 10000000] },
   filterCategories: { type: Array, default: () => [] },
@@ -247,7 +246,6 @@ const emit = defineEmits([
   "clearFilters",
 ]);
 
-// Computed wrappers để liên kết hai chiều với component cha
 const activePanelsModel = computed({
   get: () => props.activePanels,
   set: (val) => emit("update:activePanels", val),
@@ -269,7 +267,6 @@ const filterColorsModel = computed({
   set: (val) => emit("update:filterColors", val),
 });
 
-// Xử lý các logic hiển thị mở rộng / thu gọn
 const defaultLimit = 5;
 
 const showMore = (type) => {
@@ -284,7 +281,6 @@ const showLess = (type) => {
   emit("update:limits", newLimits);
 };
 
-// Dữ liệu cắt theo giới hạn
 const visibleCategories = computed(() =>
   props.availableCategories.slice(0, props.limits.category),
 );
@@ -318,7 +314,6 @@ const visibleColors = computed(() =>
   color: black !important;
 }
 
-/* --- Tối ưu ô nhập giá --- */
 :deep(.price-input input[type="number"]::-webkit-outer-spin-button),
 :deep(.price-input input[type="number"]::-webkit-inner-spin-button) {
   -webkit-appearance: none;
@@ -339,7 +334,6 @@ const visibleColors = computed(() =>
   padding-right: 12px !important;
 }
 
-/* --- Tối ưu Checkbox --- */
 :deep(.custom-checkbox .v-selection-control) {
   flex-direction: row-reverse;
   justify-content: space-between;

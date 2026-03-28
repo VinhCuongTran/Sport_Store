@@ -123,7 +123,6 @@ onMounted(() => {
   width: 100%;
 }
 
-/* Ép thẻ img bên trong Vuetify luôn giữ tỉ lệ, thu gọn vào giữa, không xén viền */
 :deep(.slider-img .v-img__img) {
   object-fit: contain !important;
 }
@@ -131,13 +130,13 @@ onMounted(() => {
 .slider-img {
   width: 100%;
   height: 100%;
-  max-height: 400px; /* Hạn chế chiều cao tối đa để ảnh không tràn ra ngoài carousel */
+  max-height: 400px;
 }
 
 .content-inner {
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Sửa từ flex-start thành center để căn giữa toàn bộ chữ theo chiều dọc */
+  justify-content: center;
   width: 100%;
   height: 100%;
 }

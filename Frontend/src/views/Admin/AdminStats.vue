@@ -311,9 +311,8 @@ const stats = ref({
   lowStockProducts: [],
 });
 
-// Xử lý hiển thị danh sách cuộn động
 const tableContainer = ref(null);
-const pageSize = ref(5); // Sẽ được cập nhật động
+const pageSize = ref(5);
 const displayCount = ref(5);
 
 const visibleProducts = computed(() => {
@@ -322,19 +321,10 @@ const visibleProducts = computed(() => {
 
 const calculatePageSize = () => {
   if (tableContainer.value) {
-    // Lấy vị trí top của bảng so với viewport
     const rect = tableContainer.value.getBoundingClientRect();
-
-    // Chiều cao trống còn lại (trừ đi header bảng khoảng 50px và padding đáy khoảng 100px)
     const availableSpace = window.innerHeight - rect.top - 150;
-
-    // Ước tính chiều cao mỗi hàng là 55px
     let calculatedRows = Math.floor(availableSpace / 55);
-
-    // Đảm bảo luôn hiển thị tối thiểu 3 dòng để không bị lỗi UI trên màn hình quá bé
     pageSize.value = Math.max(3, calculatedRows);
-
-    // Nếu là lần đầu hoặc đang ở chế độ thu gọn thì set lại số lượng hiển thị bằng pageSize mới
     if (
       displayCount.value < pageSize.value ||
       displayCount.value === pageSize.value
@@ -345,13 +335,11 @@ const calculatePageSize = () => {
 };
 
 const showMore = () => {
-  // Mỗi lần ấn thêm sẽ xổ ra đúng số lượng bằng với list ban đầu
   displayCount.value += pageSize.value;
 };
 
 const showLess = () => {
   displayCount.value = pageSize.value;
-  // Cuộn mượt mà lên lại đầu bảng khi thu gọn
   if (tableContainer.value) {
     tableContainer.value.scrollIntoView({
       behavior: "smooth",
@@ -370,8 +358,6 @@ const fetchStats = async () => {
   try {
     const response = await api.get("/stats");
     stats.value = response.data;
-
-    // Tính toán lại kích thước hiển thị sau khi dữ liệu đã render vào DOM
     nextTick(() => {
       setTimeout(calculatePageSize, 100);
     });
@@ -385,7 +371,6 @@ const fetchStats = async () => {
 
 onMounted(() => {
   fetchStats();
-  // Cập nhật lại tính toán khi người dùng thay đổi kích thước cửa sổ trình duyệt
   window.addEventListener("resize", calculatePageSize);
 });
 

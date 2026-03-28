@@ -5,7 +5,7 @@
         <h1 class="text-h3 font-weight-black text-black text-uppercase mb-3">
           Hàng mới về
         </h1>
-        
+
         <p v-if="searchQuery" class="text-grey-darken-1 text-subtitle-1 mb-4">
           Kết quả tìm kiếm cho: <strong>"{{ searchQuery }}"</strong>
         </p>
@@ -136,7 +136,6 @@ const products = ref([]);
 const categories = ref([]);
 const brands = ref([]);
 
-// Thay đổi mảng rỗng để đóng tất cả các panel khi mới load
 const activePanels = ref([]);
 
 const sortOrder = ref("newest");
@@ -227,8 +226,6 @@ const getProductsForFilter = (excludeFilter = null) => {
 
   return result;
 };
-
-// Cập nhật: Làm cho maxPriceLimit thay đổi linh hoạt theo các bộ lọc khác
 const maxPriceLimit = computed(() => {
   const validProducts = getProductsForFilter("price");
   if (validProducts.length === 0) return 10000000;
@@ -241,24 +238,18 @@ const maxPriceLimit = computed(() => {
   return max > 0 ? Math.ceil(max / 50000) * 50000 : 10000000;
 });
 
-// Watcher thông minh: Tự kéo thanh giá thụt vào nếu limit giảm, 
-// và tự nới ra nếu limit tăng (trường hợp user chưa chủ động kéo thanh giá)
 watch(maxPriceLimit, (newMax, oldMax) => {
   let newRange = [...priceRange.value];
   let changed = false;
 
-  // Nếu limit mới lớn hơn, và đầu thanh trượt đang chạm kịch trần limit cũ -> Nới thanh trượt ra theo limit mới
   if (oldMax && newRange[1] === oldMax && newMax > oldMax) {
     newRange[1] = newMax;
     changed = true;
-  }
-  // Nếu limit mới thụt vào, bắt buộc phải ép đầu thanh trượt thụt vào để không vượt quá max
-  else if (newRange[1] > newMax) {
+  } else if (newRange[1] > newMax) {
     newRange[1] = newMax;
     changed = true;
   }
 
-  // Đầu min không được lớn hơn limit mới
   if (newRange[0] > newMax) {
     newRange[0] = 0;
     changed = true;
@@ -279,20 +270,17 @@ const fetchData = async () => {
     ]);
 
     products.value = productsData.filter((p) => p.status === "active");
-    // (Lưu ý: Bến trang NewArrivals thì vẫn giữ phần .sort(...).slice(0, 40) của bạn nhé)
-    
+
     categories.value = categoriesData;
     brands.value = brandsData;
 
-    // --- BỔ SUNG: Tính ngay giá cao nhất của toàn bộ sản phẩm thực tế ---
     let absoluteMax = 0;
     products.value.forEach((p) => {
       const pPrice = getMinPrice(p);
       if (pPrice > absoluteMax) absoluteMax = pPrice;
     });
-    // Làm tròn lên bội số của 50.000đ
-    const roundedMax = absoluteMax > 0 ? Math.ceil(absoluteMax / 50000) * 50000 : 10000000;
-    // ---------------------------------------------------------------------
+    const roundedMax =
+      absoluteMax > 0 ? Math.ceil(absoluteMax / 50000) * 50000 : 10000000;
 
     const savedFilters = sessionStorage.getItem("productsFilterState");
     if (savedFilters) {
@@ -300,28 +288,24 @@ const fetchData = async () => {
       filterBrands.value = parsed.filterBrands || [];
       filterCategories.value = parsed.filterCategories || [];
       filterColors.value = parsed.filterColors || [];
-      
-      // Nếu có giá trị lưu từ trước thì khôi phục, nếu KHÔNG thì set kịch trần bằng giá trị thực tế
+
       if (parsed.priceRange && parsed.priceRange.length === 2) {
         priceRange.value = parsed.priceRange;
       } else {
-        priceRange.value = [0, roundedMax]; 
+        priceRange.value = [0, roundedMax];
       }
-      
+
       if (parsed.activePanels) activePanels.value = parsed.activePanels;
       if (parsed.sortOrder) sortOrder.value = parsed.sortOrder;
     } else {
-      // Set kịch trần ngay khi vào trang lần đầu
       priceRange.value = [0, roundedMax];
     }
-    
   } catch (error) {
     console.error("Lỗi khi tải dữ liệu sản phẩm:", error);
   } finally {
     isLoading.value = false;
     nextTick(() => {
-      // (Giữ nguyên logic scroll cũ của bạn ở đây...)
-      const savedPosition = sessionStorage.getItem("productsScrollPos"); // Đổi key tương ứng với file
+      const savedPosition = sessionStorage.getItem("productsScrollPos");
       if (savedPosition) {
         setTimeout(
           () =>
@@ -423,7 +407,6 @@ const clearFilters = () => {
   };
   sessionStorage.removeItem("productsFilterState");
 
-  // Đợi computed properties cập nhật rồi gán lại priceRange
   nextTick(() => {
     priceRange.value = [0, maxPriceLimit.value];
   });

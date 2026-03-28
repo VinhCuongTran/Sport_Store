@@ -197,19 +197,16 @@ const removeAccents = (str) => {
     .toLowerCase();
 };
 
-// Hàm lấy dữ liệu sản phẩm để tính toán bộ lọc
 const getProductsForFilter = (excludeFilter = null) => {
   let result = [...products.value];
 
   if (searchQuery.value) {
-    // Tách chuỗi thành các từ khóa và loại bỏ khoảng trắng thừa
     const searchTerms = removeAccents(searchQuery.value)
       .split(" ")
       .filter((term) => term.trim() !== "");
 
     result = result.filter((p) => {
       const productName = removeAccents(p.name);
-      // Đảm bảo tên sản phẩm chứa TẤT CẢ các từ khóa người dùng nhập
       return searchTerms.every((term) => productName.includes(term));
     });
   }
@@ -248,7 +245,6 @@ const getProductsForFilter = (excludeFilter = null) => {
   return result;
 };
 
-// Tính maxPriceLimit dựa trên các sản phẩm hiện có
 const maxPriceLimit = computed(() => {
   const validProducts = getProductsForFilter("price");
   if (validProducts.length === 0) return 10000000;
@@ -261,7 +257,6 @@ const maxPriceLimit = computed(() => {
   return max > 0 ? Math.ceil(max / 50000) * 50000 : 10000000;
 });
 
-// Watcher tự động kéo thanh trượt xuống nếu max mới nhỏ hơn cấu hình cũ
 watch(maxPriceLimit, (newMax, oldMax) => {
   let newRange = [...priceRange.value];
   let changed = false;

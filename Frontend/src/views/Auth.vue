@@ -10,7 +10,6 @@
       :class="{ 'right-panel-active': isSignUp }"
       id="container"
     >
-      <!-- ── ĐĂNG KÝ ───────────────────────────────────── -->
       <div class="form-container sign-up-container">
         <div class="form-inner">
           <div class="form-head">
@@ -159,7 +158,6 @@
         </div>
       </div>
 
-      <!-- ── ĐĂNG NHẬP ─────────────────────────────────── -->
       <div class="form-container sign-in-container">
         <div class="form-inner">
           <div class="form-head">
@@ -218,7 +216,6 @@
         </div>
       </div>
 
-      <!-- ── OVERLAY ────────────────────────────────────── -->
       <div class="overlay-container">
         <div class="overlay">
           <div class="overlay-panel overlay-left">
@@ -251,7 +248,6 @@
       </div>
     </div>
 
-    <!-- ── OTP DIALOG (Đăng ký) ──────────────────────────── -->
     <v-dialog v-model="verifyDialog" max-width="420" persistent>
       <v-card class="otp-card" theme="light" color="white">
         <div class="otp-header">
@@ -332,7 +328,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- ── QUÊN MẬT KHẨU DIALOG ─────────────────────────── -->
     <v-dialog v-model="forgotDialog" max-width="440" persistent>
       <v-card class="otp-card" theme="light" color="white">
         <div class="otp-header">
@@ -350,7 +345,6 @@
         </div>
 
         <div class="otp-body">
-          <!-- Bước 1: Nhập email hoặc SĐT -->
           <div v-if="forgotStep === 1">
             <v-text-field
               v-model="forgotIdentifier"
@@ -366,7 +360,6 @@
             />
           </div>
 
-          <!-- Bước 2: Nhập OTP -->
           <div v-else-if="forgotStep === 2" class="otp-step-2">
             <p class="otp-hint">
               Mã OTP đã được gửi đến <strong>{{ forgotMaskedEmail }}</strong>
@@ -389,7 +382,6 @@
             </p>
           </div>
 
-          <!-- Bước 3: Đặt mật khẩu mới -->
           <div v-else-if="forgotStep === 3">
             <v-text-field
               v-model="forgotNewPassword"
@@ -490,7 +482,6 @@ const switchToRegister = () => {
   router.replace({ name: "register" });
 };
 
-// ── Đăng nhập ────────────────────────────────────────────────────────────
 const loginData = reactive({ identifier: "", password: "" });
 const isLoadingLogin = ref(false);
 const showLoginPassword = ref(false);
@@ -526,7 +517,6 @@ const submitLogin = async () => {
   }
 };
 
-// ── Đăng ký ──────────────────────────────────────────────────────────────
 const registerForm = ref(null);
 const isRegisterFormValid = ref(false);
 const registerData = reactive({
@@ -639,12 +629,11 @@ const verifyAndRegister = async () => {
   }
 };
 
-// ── Quên mật khẩu ────────────────────────────────────────────────────────
 const forgotDialog = ref(false);
 const forgotStep = ref(1);
-const forgotIdentifier = ref(""); // email hoặc SĐT người dùng nhập
-const forgotRealEmail = ref(""); // email thực lấy từ CSDL (bước 1 trả về)
-const forgotMaskedEmail = ref(""); // email đã che để hiển thị
+const forgotIdentifier = ref("");
+const forgotRealEmail = ref("");
+const forgotMaskedEmail = ref("");
 const forgotOtp = ref("");
 const forgotNewPassword = ref("");
 const forgotConfirmPassword = ref("");
@@ -694,7 +683,6 @@ const resendForgotOtp = async () => {
     forgotMaskedEmail.value = res.maskedEmail;
     showMessage("Đã gửi lại mã OTP vào email của bạn");
   } catch (error) {
-    // Gọi dialog
     showError(error.response?.data?.message || "Lỗi khi gửi lại mã OTP");
   } finally {
     isForgotLoading.value = false;
@@ -747,7 +735,6 @@ const handleForgotStep = async () => {
     isForgotLoading.value = false;
   }
 };
-// ── Kiểm tra bị Admin khóa tài khoản ────────────────────────────────────
 onMounted(() => {
   if (route.query.locked) {
     // Dùng setTimeout xíu để đảm bảo ConfirmDialog đã render xong
@@ -768,7 +755,6 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
-/* ── Page Background ───────────────────────────────────── */
 .auth-wrapper {
   position: relative;
   min-height: 100vh;
@@ -825,7 +811,6 @@ onMounted(() => {
   }
 }
 
-/* ── Main Card ─────────────────────────────────────────── */
 .auth-card {
   position: relative;
   overflow: hidden;
@@ -840,7 +825,6 @@ onMounted(() => {
     0 0 0 1px rgba(0, 26, 45, 0.05);
 }
 
-/* ── Form Containers ───────────────────────────────────── */
 .form-container {
   position: absolute;
   top: 0;
@@ -884,7 +868,6 @@ onMounted(() => {
   }
 }
 
-/* ── Form Inner ────────────────────────────────────────── */
 .form-inner {
   height: 100%;
   display: flex;
@@ -938,7 +921,6 @@ onMounted(() => {
   color: #001a2d !important;
 }
 
-/* ── Forgot Row ────────────────────────────────────────── */
 .forgot-row {
   text-align: right;
   margin-bottom: 16px;
@@ -956,7 +938,6 @@ onMounted(() => {
   text-decoration: underline;
 }
 
-/* ── Submit Button ─────────────────────────────────────── */
 :deep(.auth-submit-btn) {
   background: linear-gradient(135deg, #001a2d, #003459) !important;
   color: white !important;
@@ -972,7 +953,6 @@ onMounted(() => {
   box-shadow: 0 8px 28px rgba(0, 26, 45, 0.38) !important;
 }
 
-/* ── Overlay ───────────────────────────────────────────── */
 .overlay-container {
   position: absolute;
   top: 0;
@@ -1080,7 +1060,6 @@ onMounted(() => {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* ── OTP / Forgot Dialog ───────────────────────────────── */
 :deep(.otp-card.v-card) {
   border-radius: 24px !important;
   overflow: hidden;
@@ -1242,7 +1221,6 @@ onMounted(() => {
   transform: none;
 }
 
-/* ── Error Alert ───────────────────────────────────────── */
 .error-alert {
   display: flex;
   align-items: center;
@@ -1324,7 +1302,6 @@ onMounted(() => {
   margin-top: 8px;
 }
 
-/* Fix ô input trong dialog bị nền đen (Vuetify dark mode override) */
 :deep(.forgot-field .v-field) {
   background: #f7f9fc !important;
   color: #001a2d !important;

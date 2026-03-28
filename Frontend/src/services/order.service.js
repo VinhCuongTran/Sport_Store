@@ -4,18 +4,23 @@ class OrderService {
   async getAll() {
     return (await api.get("/orders")).data;
   }
+
   async get(id) {
     return (await api.get(`/orders/${id}`)).data;
   }
+
   async updateStatus(id, data) {
     return (await api.put(`/orders/${id}/status`, data)).data;
   }
+
   async getByUser(userId) {
     return (await api.get(`/orders/user/${userId}`)).data;
   }
+
   async create(data) {
     return (await api.post("/orders", data)).data;
   }
+
   async cancel(id) {
     return (await api.put(`/orders/${id}/cancel`)).data;
   }
