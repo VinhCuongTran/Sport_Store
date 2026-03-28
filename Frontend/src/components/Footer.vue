@@ -33,15 +33,14 @@
           </div>
           <div class="contact-info text-center text-md-left">
             <p class="text-grey-lighten-1 text-body-2 mb-2">
-              <v-icon size="small" class="mr-2">mdi-map-marker</v-icon> 123
-              Đường Thể Thao, Hà Nội
+              <v-icon size="small" class="mr-2">mdi-map-marker</v-icon> 123 Đường 3/2, Phường Ninh Kiều, Thành phố Cần Thơ
             </p>
             <p class="text-grey-lighten-1 text-body-2 mb-2">
-              <v-icon size="small" class="mr-2">mdi-phone</v-icon> 0123 456 789
+              <v-icon size="small" class="mr-2">mdi-phone</v-icon> 0987654321
             </p>
             <p class="text-grey-lighten-1 text-body-2 mb-2">
               <v-icon size="small" class="mr-2">mdi-email</v-icon>
-              contact@sportstore.com
+              sportstore@gmail.com
             </p>
           </div>
         </v-col>

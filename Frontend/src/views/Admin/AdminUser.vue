@@ -275,6 +275,7 @@
                 <select
                   v-model="formData.status"
                   class="custom-input text-black"
+                  :disabled="formData.id === currentUser.id"
                 >
                   <option value="active">Active (Hoạt động)</option>
                   <option value="blocked">Blocked (Bị khóa)</option>
@@ -387,6 +388,7 @@ import Loading from "@/components/Loading.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
 const users = ref([]);
+const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 const showModal = ref(false);
 const isLoading = ref(false);
 const search = ref("");
@@ -483,6 +485,10 @@ const handleDelete = async (user) => {
 };
 
 const toggleStatus = async (user) => {
+  if (user.id === currentUser.id) {
+    showMessage("Bạn không thể tự khóa tài khoản của chính mình!", "error");
+    return;
+  }
   const newStatus = user.status === "active" ? "blocked" : "active";
   const actionText = newStatus === "blocked" ? "khóa" : "mở khóa";
 
@@ -538,6 +544,10 @@ const handleFileChange = (event) => {
 const handleSave = async () => {
   if (!formData.value.name || !formData.value.email) {
     showMessage("Vui lòng điền đầy đủ Tên và Email!", "error");
+    return;
+  }
+  if (formData.value.id === currentUser.id && formData.value.status === 'blocked') {
+    showMessage("Bạn không thể tự khóa tài khoản của chính mình!", "error");
     return;
   }
 

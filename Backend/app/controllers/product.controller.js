@@ -83,7 +83,13 @@ const Product = {
   }),
 
   update: asyncHandler(async (req, res) => {
-    const { variants, images_meta, ...productData } = req.body;
+    const {
+      variants,
+      images_meta,
+      deleted_images,
+      thumbnail_id,
+      ...productData
+    } = req.body;
 
     let parsedVariants = [];
     if (variants) {
@@ -97,21 +103,22 @@ const Product = {
         typeof images_meta === "string" ? JSON.parse(images_meta) : images_meta;
     }
 
-    let newImages = [];
-    if (req.files && req.files.length > 0) {
-      newImages = req.files.map((file, index) => {
-        const meta = parsedImagesMeta[index] || {};
-        return {
-          image_url: file.path,
-          color: meta.color || null,
-          is_thumbnail:
-            meta.is_thumbnail !== undefined ? meta.is_thumbnail : index === 0,
-        };
-      });
+    let parsedDeletedImages = [];
+    if (deleted_images) {
+      parsedDeletedImages =
+        typeof deleted_images === "string"
+          ? JSON.parse(deleted_images)
+          : deleted_images;
+    }
 
+    // Xóa file ảnh cũ trên Cloudinary
+    if (parsedDeletedImages.length > 0) {
       const oldProduct = await ProductModel.getById(req.params.id);
       if (oldProduct && oldProduct.images && oldProduct.images.length > 0) {
-        const deletePromises = oldProduct.images.map(async (img) => {
+        const imagesToDelete = oldProduct.images.filter((img) =>
+          parsedDeletedImages.includes(img.id),
+        );
+        const deletePromises = imagesToDelete.map(async (img) => {
           if (img.image_url && img.image_url.includes("cloudinary.com")) {
             const publicId = extractPublicId(img.image_url);
             if (publicId) {
@@ -123,12 +130,28 @@ const Product = {
       }
     }
 
+    let newImages = [];
+    if (req.files && req.files.length > 0) {
+      newImages = req.files.map((file, index) => {
+        const meta = parsedImagesMeta[index] || {};
+        return {
+          image_url: file.path,
+          color: meta.color || null,
+          is_thumbnail:
+            meta.is_thumbnail !== undefined ? meta.is_thumbnail : false, // Nếu k có sẽ tự tính toán logic DB
+        };
+      });
+    }
+
     const success = await ProductModel.update(
       req.params.id,
       productData,
       parsedVariants,
       newImages.length > 0 ? newImages : null,
+      parsedDeletedImages,
+      thumbnail_id || null,
     );
+
     if (!success) {
       throw new ApiError(404, "Cập nhật thất bại hoặc không tìm thấy sản phẩm");
     }

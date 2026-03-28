@@ -142,7 +142,7 @@ const OrderController = {
 
   cancelOrder: asyncHandler(async (req, res) => {
     const orderId = req.params.id;
-    const userId = req.user.id; 
+    const userId = req.user.id;
 
     try {
       await OrderModel.cancelOrder(orderId, userId);

@@ -37,7 +37,7 @@
       class="pa-4"
       style="
         border: 1px solid rgba(99, 102, 241, 0.15);
-        box-shadow: 0 4px 24px rgba(99, 102, 241, 0.08);
+        box-shadow: 0 4px 24px rgba(99, 102, 241, 0.1);
       "
     >
       <div class="d-flex align-center gap-3 mb-4 px-2">
@@ -82,6 +82,12 @@
           <v-skeleton-loader type="table-row@6" />
         </template>
 
+        <template v-slot:item.id="{ item }">
+          <span class="font-weight-black text-indigo-darken-4">{{
+            item.id
+          }}</span>
+        </template>
+
         <template v-slot:item.parent_id="{ item }">
           <v-chip
             size="small"
@@ -107,7 +113,7 @@
         <template v-slot:item.actions="{ item }">
           <div class="d-flex justify-center gap-2">
             <v-btn
-              color="amber-darken-2"
+              color="indigo-darken-3"
               size="small"
               rounded="lg"
               prepend-icon="mdi-pencil"
@@ -288,10 +294,16 @@ const snackbar = ref({ show: false, text: "", color: "success" });
 
 const headers = [
   { title: "ID", key: "id", width: "80px", align: "center" },
-  { title: "Tên danh mục", key: "name", align: "center" },
+  { title: "Tên danh mục", key: "name", align: "start" },
   { title: "Danh mục cha", key: "parent_id", align: "center" },
   { title: "Môn thể thao", key: "sport_id", align: "center" },
-  { title: "Thao tác", key: "actions", sortable: false, align: "center" },
+  {
+    title: "Thao tác",
+    key: "actions",
+    sortable: false,
+    align: "center",
+    width: "180px",
+  },
 ];
 
 const defaultItem = { id: null, name: "", parent_id: null, sport_id: null };
@@ -426,12 +438,19 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.gap-2 {
+  gap: 8px;
+}
+.gap-3 {
+  gap: 12px;
+}
+
+/* Background Header bảng giống y hệt trang Sport */
 :deep(.v-data-table th.v-data-table__th) {
   background: linear-gradient(90deg, #e8eaf6 0%, #f3f4f6 100%) !important;
   color: #283593 !important;
   font-weight: 700 !important;
-  font-size: 0.875rem !important;
-  letter-spacing: 0.02em;
+  font-size: 0.9rem !important;
 }
 
 :deep(.v-data-table th.v-data-table__th:hover),
@@ -441,16 +460,5 @@ onMounted(() => {
 
 :deep(.v-data-table td) {
   vertical-align: middle;
-}
-
-:deep(.v-data-table__tr:hover td) {
-  background-color: rgba(232, 234, 246, 0.4) !important;
-}
-
-.gap-2 {
-  gap: 8px;
-}
-.gap-3 {
-  gap: 12px;
 }
 </style>

@@ -24,19 +24,36 @@
       </v-chip>
     </div>
 
-    <v-card-title class="text-h6 font-weight-bold pt-2 pb-0 text-truncate">
+    <v-card-title
+      class="text-h6 font-weight-bold pt-2 pb-0 text-truncate text-center"
+    >
       {{ product.name }}
     </v-card-title>
 
-    <v-card-subtitle class="pb-2 mt-1">
+    <v-card-subtitle class="pb-2 mt-1 text-center">
       Thương hiệu: {{ product.brand_name || "Khác" }}
     </v-card-subtitle>
 
     <v-card-text class="py-1">
-      <div class="font-weight-bold text-red-darken-1 text-h6">
-        {{ formatPrice(product.min_price) }}
+      <div class="price-block">
+        <template v-if="product.active_discount > 0">
+          <div
+            class="text-caption text-decoration-line-through text-grey-darken-1 font-weight-medium"
+          >
+            {{ formatPrice(originalPrice) }}
+          </div>
+          <div class="custom-price-red">
+            {{ formatPrice(discountedPrice) }}
+          </div>
+        </template>
+        <template v-else>
+          <div class="custom-price-red">
+            {{ formatPrice(originalPrice) }}
+          </div>
+        </template>
       </div>
-      <div class="text-caption text-grey-darken-1 mt-1">
+
+      <div class="text-caption text-grey-darken-1 mt-1 text-center">
         Danh mục: {{ product.category_name || "Đang cập nhật" }}
       </div>
     </v-card-text>
@@ -62,13 +79,21 @@
 </template>
 
 <script setup>
-import { defineProps } from "vue";
+import { defineProps, computed } from "vue";
 
 const props = defineProps({
   product: {
     type: Object,
     required: true,
   },
+});
+
+// Logic tính toán 2 giá tương tự ProductDetail
+const originalPrice = computed(() => props.product.min_price || 0);
+
+const discountedPrice = computed(() => {
+  const discount = props.product.active_discount || 0;
+  return originalPrice.value * (1 - discount / 100);
 });
 
 const formatPrice = (value) => {
@@ -101,8 +126,28 @@ const formatPrice = (value) => {
 
 .discount-badge {
   position: absolute;
-  top: 25px;
-  right: 25px;
-  z-index: 1;
+  top: 0;
+  right: 0;
+  border-radius: 0 8px 0 8px !important;
+  z-index: 2;
+  font-size: 14px;
+  padding: 4px 12px;
+}
+
+.price-block {
+  min-height: 54px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center; /* Đưa tất cả giá vào chính giữa (căn giữa theo chiều ngang) */
+}
+
+/* Class tự định nghĩa để ép chữ to ra và có màu đỏ nổi bật */
+.custom-price-red {
+  font-size: 24px !important; /* Bạn có thể tăng số này lên (ví dụ 28px) nếu muốn to hơn nữa */
+  font-weight: 900 !important;
+  color: #e53935 !important; /* Màu đỏ */
+  line-height: 1.2 !important;
+  text-align: center !important;
 }
 </style>

@@ -72,7 +72,7 @@ const CartController = {
       cart_item_id: cartItemId,
     });
   }),
-  
+
   updateQuantity: asyncHandler(async (req, res) => {
     const cartItemId = req.params.itemId;
     const { quantity } = req.body;

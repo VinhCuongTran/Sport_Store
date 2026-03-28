@@ -85,16 +85,6 @@
           >
         </template>
 
-        <template v-slot:item.user="{ item }">
-          <div class="text-body-2 font-weight-bold text-black">
-            {{ item.user_name || "Khách ẩn danh" }}
-          </div>
-          <div class="text-caption text-grey-darken-2 d-flex align-center mt-1">
-            <v-icon size="12" class="mr-1">mdi-email-outline</v-icon
-            >{{ item.user_email || "N/A" }}
-          </div>
-        </template>
-
         <template v-slot:item.product_name="{ item }">
           <span class="text-body-2 font-weight-medium text-indigo-darken-3">{{
             item.product_name
@@ -128,6 +118,7 @@
 
         <template v-slot:item.actions="{ item }">
           <v-btn
+            v-if="isSuperAdmin"
             color="red-darken-1"
             size="small"
             rounded="lg"
@@ -161,11 +152,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import ReviewService from "@/services/review.service";
 import Loading from "@/components/Loading.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import AuthService from "@/services/auth.service";
 
+const isSuperAdmin = computed(() => AuthService.isSuperAdmin());
 const reviews = ref([]);
 const isLoading = ref(false);
 const search = ref("");

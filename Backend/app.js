@@ -12,6 +12,7 @@ const VoucherRouter = require("./app/routes/voucher.routes");
 const ReviewRouter = require("./app/routes/review.routes");
 const AddressRouter = require("./app/routes/address.routes");
 const statsRouter = require("./app/routes/stats.routes");
+const chatbotRouter = require("./app/routes/chatbot.routes");
 const errorHandler = require("./app/middlewares/error.middleware");
 
 const app = express();
@@ -33,6 +34,7 @@ app.use("/api/vouchers", VoucherRouter);
 app.use("/api/reviews", ReviewRouter);
 app.use("/api/addresses", AddressRouter);
 app.use("/api/stats", statsRouter);
+app.use("/api/chatbot", chatbotRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the Sports Store API!" });

@@ -79,7 +79,7 @@
       >
         <template v-slot:item.id="{ item }">
           <span class="font-weight-black text-indigo-darken-4"
-            >#{{ item.id }}</span
+            >{{ item.id }}</span
           >
         </template>
 

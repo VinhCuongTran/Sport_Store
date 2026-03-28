@@ -27,8 +27,8 @@ const Product = {
         const variantValues = variants.map((v) => [
           generateId(),
           productId,
-          v.size,
-          v.color,
+          v.size ? v.size.trim().toUpperCase() : null,
+          v.color ? v.color.trim().toUpperCase() : null,
           v.price || 0,
           v.stock || 0,
         ]);
@@ -43,7 +43,7 @@ const Product = {
           generateId(),
           productId,
           img.image_url,
-          img.color || null,
+          img.color ? img.color.trim().toUpperCase() : null,
           img.is_thumbnail === true ||
           img.is_thumbnail === "true" ||
           img.is_thumbnail === 1
@@ -71,7 +71,15 @@ const Product = {
       SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name,
              (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumbnail,
              (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price,
-             IF(p.sale_start <= NOW() AND p.sale_end >= NOW(), p.discount_percent, 0) as active_discount
+             CASE
+               WHEN p.discount_percent > 0
+                 AND (p.sale_start IS NULL OR p.sale_start <= NOW())
+                 AND (p.sale_end IS NULL OR p.sale_end >= NOW())
+               THEN p.discount_percent
+               ELSE 0
+             END AS active_discount,
+             (SELECT GROUP_CONCAT(DISTINCT UPPER(color)) FROM product_variants WHERE product_id = p.id) as colors,
+             (SELECT GROUP_CONCAT(DISTINCT UPPER(size)) FROM product_variants WHERE product_id = p.id) as sizes
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
@@ -85,7 +93,14 @@ const Product = {
       `SELECT p.*, b.name as brand_name, 
               c.name as category_name, c.parent_id,
               pc.name as parent_category_name, 
-              s.name as sport_name
+              s.name as sport_name,
+              CASE
+                WHEN p.discount_percent > 0
+                  AND (p.sale_start IS NULL OR p.sale_start <= NOW())
+                  AND (p.sale_end IS NULL OR p.sale_end >= NOW())
+                THEN p.discount_percent
+                ELSE 0
+              END AS active_discount
        FROM products p
        LEFT JOIN brands b ON p.brand_id = b.id
        LEFT JOIN categories c ON p.category_id = c.id
@@ -106,10 +121,26 @@ const Product = {
       [id],
     );
 
-    return { ...product[0], variants, images };
+    const [vouchers] = await db.query(
+      `SELECT code, discount_type, discount_value, min_order_value, max_discount, end_date
+       FROM vouchers
+       WHERE start_date <= NOW()
+         AND end_date >= NOW()
+         AND (usage_limit IS NULL OR used_count < usage_limit)
+       ORDER BY discount_value DESC`,
+    );
+
+    return { ...product[0], variants, images, available_vouchers: vouchers };
   },
 
-  update: async (id, data, variants, images) => {
+  update: async (
+    id,
+    data,
+    variants,
+    images,
+    deletedImageIds = [],
+    thumbnailId = null,
+  ) => {
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
@@ -148,12 +179,19 @@ const Product = {
         }
 
         for (const variant of variants) {
+          const cleanSize = variant.size
+            ? variant.size.trim().toUpperCase()
+            : null;
+          const cleanColor = variant.color
+            ? variant.color.trim().toUpperCase()
+            : null;
+
           if (variant.id) {
             await connection.query(
               "UPDATE product_variants SET size=?, color=?, price=?, stock=? WHERE id=?",
               [
-                variant.size,
-                variant.color,
+                cleanSize,
+                cleanColor,
                 variant.price || 0,
                 variant.stock || 0,
                 variant.id,
@@ -165,8 +203,8 @@ const Product = {
               [
                 generateId(),
                 id,
-                variant.size,
-                variant.color,
+                cleanSize,
+                cleanColor,
                 variant.price || 0,
                 variant.stock || 0,
               ],
@@ -174,17 +212,38 @@ const Product = {
           }
         }
       }
-
-      if (images && images.length > 0) {
+      if (deletedImageIds && deletedImageIds.length > 0) {
         await connection.query(
-          "DELETE FROM product_images WHERE product_id = ?",
+          "DELETE FROM product_images WHERE id IN (?) AND product_id = ?",
+          [deletedImageIds, id],
+        );
+      }
+      const hasNewThumbnail =
+        images &&
+        images.some(
+          (img) =>
+            img.is_thumbnail === true ||
+            img.is_thumbnail === 1 ||
+            img.is_thumbnail === "true",
+        );
+      if (thumbnailId || hasNewThumbnail) {
+        await connection.query(
+          "UPDATE product_images SET is_thumbnail = 0 WHERE product_id = ?",
           [id],
         );
+      }
+      if (thumbnailId) {
+        await connection.query(
+          "UPDATE product_images SET is_thumbnail = 1 WHERE id = ? AND product_id = ?",
+          [thumbnailId, id],
+        );
+      }
+      if (images && images.length > 0) {
         const imageValues = images.map((img) => [
           generateId(),
           id,
           img.image_url,
-          img.color || null,
+          img.color ? img.color.trim().toUpperCase() : null,
           img.is_thumbnail === true ||
           img.is_thumbnail === "true" ||
           img.is_thumbnail === 1

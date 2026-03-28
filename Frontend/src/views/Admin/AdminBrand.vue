@@ -76,6 +76,12 @@
         class="bg-white rounded-lg"
         no-data-text="Chưa có thương hiệu nào"
       >
+        <template v-slot:item.id="{ item }">
+          <span class="font-weight-black text-indigo-darken-4">{{
+            item.id
+          }}</span>
+        </template>
+
         <template v-slot:item.logo_url="{ item }">
           <div class="d-flex justify-center align-center my-2">
             <div
@@ -105,7 +111,7 @@
         <template v-slot:item.actions="{ item }">
           <div class="d-flex justify-center gap-2">
             <v-btn
-              color="amber-darken-2"
+              color="indigo-darken-3"
               size="small"
               rounded="lg"
               prepend-icon="mdi-pencil"
@@ -249,8 +255,19 @@
       :color="snackbar.color"
       timeout="3000"
       location="top right"
+      rounded="lg"
+      elevation="4"
     >
-      {{ snackbar.text }}
+      <div class="d-flex align-center gap-2">
+        <v-icon size="18">
+          {{
+            snackbar.color === "success"
+              ? "mdi-check-circle"
+              : "mdi-alert-circle"
+          }}
+        </v-icon>
+        {{ snackbar.text }}
+      </div>
     </v-snackbar>
   </v-container>
 </template>

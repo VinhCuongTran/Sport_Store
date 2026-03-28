@@ -5,7 +5,7 @@
         <v-container class="pa-0">
           <div class="clearfix rounded-lg overflow-hidden elevation-2">
             <router-link
-              to="/products?tag=seagames"
+              to="/products"
               class="a_tow_slide"
               title="Bộ sưu tập Rise Beyond"
             >

@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const config = require("../config");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const db = require("../utils/mysql.db");
 
 const AuthMiddleware = {
   verifyToken: asyncHandler(async (req, res, next) => {
@@ -18,9 +19,27 @@ const AuthMiddleware = {
 
     try {
       const decoded = jwt.verify(token, config.jwt.secret);
+      const [users] = await db.query("SELECT status FROM users WHERE id = ?", [
+        decoded.id,
+      ]);
+
+      if (users.length === 0) {
+        throw new ApiError(401, "Tài khoản không tồn tại");
+      }
+
+      if (users[0].status === "blocked") {
+        // Ném lỗi 403 với thông báo cụ thể để Frontend nhận diện
+        throw new ApiError(
+          403,
+          "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ CSKH.",
+        );
+      }
       req.user = decoded;
       next();
     } catch (error) {
+      if (error instanceof ApiError || error.statusCode) {
+        throw error;
+      }
       if (error.name === "TokenExpiredError") {
         throw new ApiError(
           401,

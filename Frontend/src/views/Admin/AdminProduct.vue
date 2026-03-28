@@ -118,7 +118,7 @@
       >
         <template v-slot:item.id="{ item }">
           <span class="font-weight-black text-indigo-darken-4"
-            >#{{ item.id }}</span
+            >{{ item.id }}</span
           >
         </template>
 
@@ -205,6 +205,7 @@
               >Sửa</v-btn
             >
             <v-btn
+              v-if="isSuperAdmin"
               color="red-darken-1"
               size="small"
               rounded="lg"
@@ -451,7 +452,9 @@
                         v-model="quickSetup.category"
                         class="custom-input text-black border-teal"
                       >
+                        <option value="helmet">Mũ bảo hiểm (S - XL)</option>
                         <option value="shoes">Giày (US 3.5 - US 9)</option>
+                        <option value="votcaulong">Vợt cầu lông</option>
                         <option value="clothes">Quần Áo (XS - XXL)</option>
                         <option value="gloves">Găng tay (4 - 12)</option>
                         <option value="phao">Phao (2-12)</option>
@@ -543,14 +546,85 @@
                     class="text-caption font-weight-bold text-indigo-darken-3 mb-2 d-block"
                   >
                     <v-icon size="16" class="mr-1">mdi-image-multiple</v-icon>
-                    {{
-                      isEditMode
-                        ? "Tải ảnh mới (Sẽ thay thế toàn bộ ảnh cũ của màu này)"
-                        : "Tải hình ảnh"
-                    }}
-                    cho màu "{{ group.color || "này" }}"
+                    Hình ảnh cho màu "{{ group.color || "này" }}"
                   </label>
 
+                  <div
+                    v-if="
+                      group.existing_images && group.existing_images.length > 0
+                    "
+                    class="mb-3 pa-2 bg-grey-lighten-5 rounded border"
+                  >
+                    <div
+                      class="text-caption font-weight-bold text-grey-darken-1 mb-2"
+                    >
+                      Ảnh hiện tại:
+                    </div>
+                    <div class="d-flex flex-wrap gap-4">
+                      <div
+                        v-for="(img, iIndex) in group.existing_images"
+                        :key="img.id"
+                        class="position-relative border rounded shadow-sm bg-white"
+                        style="width: 80px; height: 80px"
+                      >
+                        <v-img
+                          :src="img.url"
+                          cover
+                          class="w-100 h-100 rounded"
+                        ></v-img>
+
+                        <v-btn
+                          icon="mdi-close-circle"
+                          size="small"
+                          color="red-darken-1"
+                          variant="flat"
+                          class="position-absolute"
+                          style="
+                            top: -10px;
+                            right: -10px;
+                            width: 22px;
+                            height: 22px;
+                            z-index: 10;
+                          "
+                          @click="removeExistingImage(gIndex, iIndex)"
+                        ></v-btn>
+
+                        <v-btn
+                          :icon="
+                            img.is_thumbnail ? 'mdi-star' : 'mdi-star-outline'
+                          "
+                          size="small"
+                          :color="
+                            img.is_thumbnail
+                              ? 'amber-darken-2'
+                              : 'grey-lighten-1'
+                          "
+                          variant="elevated"
+                          class="position-absolute"
+                          style="
+                            bottom: -12px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            width: 26px;
+                            height: 26px;
+                            z-index: 10;
+                          "
+                          @click="setExistingThumbnail(gIndex, iIndex)"
+                          :title="
+                            img.is_thumbnail
+                              ? 'Ảnh đại diện'
+                              : 'Chọn làm ảnh đại diện'
+                          "
+                        ></v-btn>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="text-caption font-weight-bold text-grey-darken-1 mb-1 mt-2"
+                  >
+                    Thêm ảnh mới:
+                  </div>
                   <input
                     type="file"
                     @change="(e) => handleColorFileChange(e, gIndex)"
@@ -562,7 +636,7 @@
 
                   <div
                     v-if="group.files && group.files.length > 0"
-                    class="d-flex flex-wrap gap-4 mt-3 pa-2 bg-grey-lighten-5 rounded"
+                    class="d-flex flex-wrap gap-4 mt-3 pa-2 bg-grey-lighten-5 rounded border"
                   >
                     <div
                       v-for="(fileObj, fIndex) in group.files"
@@ -620,17 +694,6 @@
                         "
                       ></v-btn>
                     </div>
-                  </div>
-
-                  <div
-                    v-if="isEditMode"
-                    class="text-caption text-red-darken-3 mt-3 d-flex align-center"
-                  >
-                    <v-icon size="14" class="mr-1"
-                      >mdi-alert-circle-outline</v-icon
-                    >
-                    Lưu ý: Chỉ click nút tải ảnh lên nếu bạn muốn cập nhật lại
-                    hình ảnh mới cho màu này.
                   </div>
                 </div>
 
@@ -765,7 +828,9 @@ import CategoryService from "@/services/category.service";
 import BrandService from "@/services/brand.service";
 import Loading from "@/components/Loading.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import AuthService from "@/services/auth.service";
 
+const isSuperAdmin = computed(() => AuthService.isSuperAdmin());
 const products = ref([]);
 const categories = ref([]);
 const brands = ref([]);
@@ -780,6 +845,10 @@ const isEditMode = ref(false);
 const confirmDialogRef = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
 
+// Lưu vết ảnh cũ và ID thumbnail cũ
+const deletedImageIds = ref([]);
+const selectedThumbnailId = ref(null);
+
 // === KHAI BÁO LOGIC TẠO NHANH ===
 const showQuickSetup = ref(false);
 const quickSetup = ref({
@@ -789,6 +858,8 @@ const quickSetup = ref({
   stock: null,
 });
 const sizePresets = {
+  votcaulong: ["3U", "4U", "5U"],
+  helmet: ["S", "M", "L"],
   shoes: [
     "US 3.5",
     "US 4",
@@ -827,6 +898,7 @@ const generateVariants = () => {
       color: quickSetup.value.color,
       sizes: [],
       files: [],
+      existing_images: [],
     };
     colorGroups.value.push(targetGroup);
   } else {
@@ -978,7 +1050,6 @@ const filteredProducts = computed(() => {
       const matchSport = item.sport_name?.toLowerCase().includes(keyword);
       const matchCategory = item.category_name?.toLowerCase().includes(keyword);
       const matchBrand = item.brand_name?.toLowerCase().includes(keyword);
-
       return matchName || matchSport || matchCategory || matchBrand;
     });
   }
@@ -1039,6 +1110,8 @@ const cleanupPreviews = () => {
 
 const openCreateModal = () => {
   isEditMode.value = false;
+  deletedImageIds.value = [];
+  selectedThumbnailId.value = null;
 
   formData.value = {
     id: null,
@@ -1068,6 +1141,8 @@ const openCreateModal = () => {
 const openEditModal = async (id) => {
   isLoading.value = true;
   showQuickSetup.value = false;
+  deletedImageIds.value = [];
+  selectedThumbnailId.value = null;
 
   try {
     const productDetail = await ProductService.get(id);
@@ -1086,12 +1161,35 @@ const openEditModal = async (id) => {
     };
 
     const existingVariants = productDetail.variants || [];
+    const existingImages = productDetail.images || [];
+    
     const grouped = {};
-    existingVariants.forEach((v) => {
-      if (!grouped[v.color]) {
-        grouped[v.color] = { color: v.color, sizes: [], files: [] };
+
+    // Hàm phụ trợ để tìm key bất chấp chữ hoa/thường hoặc khoảng trắng
+    const getGroupKey = (colorName) => {
+      const normalized = (colorName || "").trim().toLowerCase();
+      for (const key in grouped) {
+        if (key.toLowerCase() === normalized) {
+          return key;
+        }
       }
-      grouped[v.color].sizes.push({
+      return colorName ? colorName.trim() : "";
+    };
+
+    // 1. Gom nhóm Size theo màu
+    existingVariants.forEach((v) => {
+      const colorKey = getGroupKey(v.color);
+      
+      if (!grouped[colorKey]) {
+        grouped[colorKey] = { 
+          color: v.color ? v.color.trim() : "", 
+          sizes: [], 
+          files: [], 
+          existing_images: [] 
+        };
+      }
+      
+      grouped[colorKey].sizes.push({
         id: v.id,
         size: v.size,
         price: v.price,
@@ -1099,6 +1197,27 @@ const openEditModal = async (id) => {
       });
     });
 
+    // 2. Map existing images vào group tương ứng (đã chuẩn hóa key)
+    existingImages.forEach(img => {
+      const colorKey = getGroupKey(img.color);
+      
+      if (!grouped[colorKey]) {
+        grouped[colorKey] = { 
+          color: img.color ? img.color.trim() : "", 
+          sizes: [], 
+          files: [], 
+          existing_images: [] 
+        };
+      }
+      
+      grouped[colorKey].existing_images.push({
+        id: img.id,
+        url: img.image_url,
+        is_thumbnail: img.is_thumbnail == 1 || img.is_thumbnail === true
+      });
+    });
+
+    // 3. Sắp xếp lại thứ tự size
     Object.values(grouped).forEach((group) => {
       group.sizes.sort(sortSizes);
     });
@@ -1112,7 +1231,6 @@ const openEditModal = async (id) => {
     isLoading.value = false;
   }
 };
-
 const closeModal = () => {
   cleanupPreviews();
   showModal.value = false;
@@ -1123,6 +1241,7 @@ const addColorGroup = () => {
     color: "",
     sizes: [{ size: "", price: null, stock: null }],
     files: [],
+    existing_images: [],
   });
 };
 
@@ -1132,8 +1251,13 @@ const removeColorGroup = (index) => {
       URL.revokeObjectURL(f.preview),
     );
   }
+  // Ghi nhận các ảnh cũ trong màu này để xóa
+  if (colorGroups.value[index].existing_images) {
+    colorGroups.value[index].existing_images.forEach((img) => {
+      deletedImageIds.value.push(img.id);
+    });
+  }
   colorGroups.value.splice(index, 1);
-  checkAndSetDefaultThumbnail();
 };
 
 const addSizeToColor = (groupIndex) => {
@@ -1148,55 +1272,56 @@ const removeSizeFromColor = (groupIndex, sizeIndex) => {
   colorGroups.value[groupIndex].sizes.splice(sizeIndex, 1);
 };
 
-const checkAndSetDefaultThumbnail = () => {
+// Hàm loại bỏ trạng thái Thumbnail của TOÀN BỘ ảnh
+const resetAllThumbnails = () => {
   colorGroups.value.forEach((group) => {
-    if (group.files && group.files.length > 0) {
-      let hasThumbnail = false;
-      for (const fileObj of group.files) {
-        if (fileObj.is_thumbnail) {
-          hasThumbnail = true;
-          break;
-        }
-      }
-      if (!hasThumbnail) {
-        group.files[0].is_thumbnail = true;
-      }
-    }
+    if (group.files) group.files.forEach((f) => (f.is_thumbnail = false));
+    if (group.existing_images)
+      group.existing_images.forEach((f) => (f.is_thumbnail = false));
   });
 };
 
+// Xóa ảnh cũ
+const removeExistingImage = (groupIndex, imgIndex) => {
+  const img = colorGroups.value[groupIndex].existing_images[imgIndex];
+  deletedImageIds.value.push(img.id);
+  colorGroups.value[groupIndex].existing_images.splice(imgIndex, 1);
+};
+
+// Đặt ảnh CŨ làm thumbnail
+const setExistingThumbnail = (groupIndex, imgIndex) => {
+  resetAllThumbnails();
+  const img = colorGroups.value[groupIndex].existing_images[imgIndex];
+  img.is_thumbnail = true;
+  selectedThumbnailId.value = img.id;
+};
+
 const handleColorFileChange = (event, groupIndex) => {
-  if (colorGroups.value[groupIndex].files) {
-    colorGroups.value[groupIndex].files.forEach((f) =>
-      URL.revokeObjectURL(f.preview),
-    );
-  }
-
   const selectedFiles = Array.from(event.target.files);
-
-  colorGroups.value[groupIndex].files = selectedFiles.map((file) => ({
+  // Không xóa file cũ upload trong lần này, mà push thêm vào
+  const newFilesMapped = selectedFiles.map((file) => ({
     file: file,
     preview: URL.createObjectURL(file),
     is_thumbnail: false,
   }));
-  checkAndSetDefaultThumbnail();
+
+  if (!colorGroups.value[groupIndex].files) {
+    colorGroups.value[groupIndex].files = [];
+  }
+  colorGroups.value[groupIndex].files.push(...newFilesMapped);
 };
 
+// Đặt ảnh MỚI upload làm thumbnail
 const setThumbnail = (groupIndex, fileIndex) => {
-  if (colorGroups.value[groupIndex].files) {
-    colorGroups.value[groupIndex].files.forEach(
-      (f) => (f.is_thumbnail = false),
-    );
-  }
-
+  resetAllThumbnails();
   colorGroups.value[groupIndex].files[fileIndex].is_thumbnail = true;
+  selectedThumbnailId.value = null; // Reset id ảnh cũ vì đã chọn ảnh mới
 };
 
 const removeFile = (groupIndex, fileIndex) => {
   const fileObj = colorGroups.value[groupIndex].files[fileIndex];
   URL.revokeObjectURL(fileObj.preview);
   colorGroups.value[groupIndex].files.splice(fileIndex, 1);
-  checkAndSetDefaultThumbnail();
 };
 
 const handleSave = async () => {
@@ -1209,6 +1334,7 @@ const handleSave = async () => {
     showMessage("Vui lòng tạo ít nhất 1 biến thể màu sắc", "error");
     return;
   }
+
   for (let group of colorGroups.value) {
     if (!group.color) {
       showMessage("Tên màu sắc không được để trống", "error");
@@ -1225,9 +1351,6 @@ const handleSave = async () => {
     const flatVariants = [];
     const flatFiles = [];
     const imagesMeta = [];
-    const colorsToReplace = [];
-
-    const tempFiles = [];
 
     colorGroups.value.forEach((group) => {
       group.sizes.forEach((sizeObj) => {
@@ -1241,10 +1364,9 @@ const handleSave = async () => {
       });
 
       if (group.files && group.files.length > 0) {
-        colorsToReplace.push(group.color);
         group.files.forEach((fileObj) => {
-          tempFiles.push({
-            file: fileObj.file,
+          flatFiles.push(fileObj.file);
+          imagesMeta.push({
             color: group.color,
             is_thumbnail: fileObj.is_thumbnail,
           });
@@ -1252,58 +1374,42 @@ const handleSave = async () => {
       }
     });
 
-    tempFiles.sort(
-      (a, b) => (b.is_thumbnail ? 1 : 0) - (a.is_thumbnail ? 1 : 0),
-    );
+    const data = new FormData();
+    data.append("name", formData.value.name);
+    data.append("description", formData.value.description || "");
+    data.append("category_id", formData.value.category_id);
+    if (formData.value.brand_id)
+      data.append("brand_id", formData.value.brand_id);
+    data.append("status", formData.value.status);
+    data.append("discount_percent", formData.value.discount_percent || 0);
+    if (formData.value.sale_start)
+      data.append("sale_start", formData.value.sale_start);
+    if (formData.value.sale_end)
+      data.append("sale_end", formData.value.sale_end);
 
-    tempFiles.forEach((item) => {
-      flatFiles.push(item.file);
-      imagesMeta.push({
-        color: item.color,
-        is_thumbnail: item.is_thumbnail,
+    data.append("variants", JSON.stringify(flatVariants));
+
+    if (flatFiles.length > 0) {
+      data.append("images_meta", JSON.stringify(imagesMeta));
+      flatFiles.forEach((file) => {
+        data.append("images", file);
       });
-    });
+    }
 
-    if (!isEditMode.value || flatFiles.length > 0) {
-      const data = new FormData();
-      data.append("name", formData.value.name);
-      data.append("description", formData.value.description || "");
-      data.append("category_id", formData.value.category_id);
-      if (formData.value.brand_id)
-        data.append("brand_id", formData.value.brand_id);
-      data.append("status", formData.value.status);
-      data.append("discount_percent", formData.value.discount_percent || 0);
-      if (formData.value.sale_start)
-        data.append("sale_start", formData.value.sale_start);
-      if (formData.value.sale_end)
-        data.append("sale_end", formData.value.sale_end);
-
-      data.append("variants", JSON.stringify(flatVariants));
-
-      if (flatFiles.length > 0) {
-        data.append("images_meta", JSON.stringify(imagesMeta));
-
-        flatFiles.forEach((file) => {
-          data.append("images", file);
-        });
-      }
-
-      if (!isEditMode.value) {
-        await ProductService.create(data);
-        showMessage("Thêm sản phẩm thành công");
-      } else {
-        data.append("replace_image_colors", JSON.stringify(colorsToReplace));
-        data.append("_method", "PUT");
-
-        await ProductService.update(formData.value.id, data);
-        showMessage("Cập nhật sản phẩm và hình ảnh thành công");
-      }
+    if (!isEditMode.value) {
+      await ProductService.create(data);
+      showMessage("Thêm sản phẩm thành công");
     } else {
-      const payload = {
-        ...formData.value,
-        variants: flatVariants,
-      };
-      await ProductService.update(formData.value.id, payload);
+      data.append("_method", "PUT");
+
+      if (deletedImageIds.value.length > 0) {
+        data.append("deleted_images", JSON.stringify(deletedImageIds.value));
+      }
+      if (selectedThumbnailId.value) {
+        data.append("thumbnail_id", selectedThumbnailId.value);
+      }
+
+      await ProductService.update(formData.value.id, data);
       showMessage("Cập nhật sản phẩm thành công");
     }
 
@@ -1325,6 +1431,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Các style cũ được giữ nguyên... */
 .border-teal {
   border-color: #4db6ac !important;
 }
@@ -1332,7 +1439,6 @@ onMounted(() => {
   border-color: #00796b !important;
   box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.12) !important;
 }
-
 .custom-input {
   width: 100%;
   padding: 8px 12px;
@@ -1391,7 +1497,6 @@ input[type="file"].custom-input {
   display: flex !important;
   align-items: center !important;
 }
-
 :deep(.v-input--density-compact .v-field) {
   min-height: 42px !important;
 }
@@ -1401,19 +1506,16 @@ input[type="file"].custom-input {
 :deep(.v-field--variant-outlined .v-field__outline__end) {
   border-radius: 0 8px 8px 0;
 }
-
 :deep(.v-data-table th.v-data-table__th) {
   background: linear-gradient(90deg, #e8eaf6 0%, #f3f4f6 100%) !important;
   color: #283593 !important;
   font-weight: 700 !important;
   font-size: 0.9rem !important;
 }
-
 :deep(.v-data-table th.v-data-table__th:hover),
 :deep(.v-data-table th.v-data-table__th:hover .v-data-table-header__sort-icon) {
   color: #1a237e !important;
 }
-
 :deep(.v-data-table td) {
   vertical-align: middle;
 }

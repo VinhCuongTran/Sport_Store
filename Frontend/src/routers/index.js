@@ -11,6 +11,7 @@ const routes = [
         path: "",
         name: "admin-stats",
         component: () => import("../views/Admin/AdminStats.vue"),
+        meta: { requiresSuperAdmin: true}
       },
       {
         path: "categories",
@@ -31,6 +32,7 @@ const routes = [
         path: "users",
         name: "admin-user",
         component: () => import("../views/Admin/AdminUser.vue"),
+        meta: { requiresSuperAdmin: true }, // Chỉ Admin mới vào được
       },
       {
         path: "products",
@@ -41,6 +43,7 @@ const routes = [
         path: "vouchers",
         name: "admin-voucher",
         component: () => import("../views/Admin/AdminVoucher.vue"),
+        meta: { requiresSuperAdmin: true }, // Chỉ Admin mới vào được
       },
       {
         path: "reviews",
@@ -54,7 +57,6 @@ const routes = [
       },
     ],
   },
-
   {
     path: "/",
     component: () => import("../components/DefaultLayout.vue"),
@@ -141,8 +143,27 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  const token = localStorage.getItem("token");
+  const isAuthenticated = !!(user && token);
+
+  // 1. Kiểm tra quyền vào trang admin nói chung
   if (to.matched.some((record) => record.meta.requiresAdmin)) {
     if (!AuthService.isAdmin()) {
+      return { name: "login" };
+    }
+  }
+
+  // 2. Kiểm tra quyền vào các trang dành riêng cho Super Admin (như Quản lý Users)
+  if (to.matched.some((record) => record.meta.requiresSuperAdmin)) {
+    if (!AuthService.isSuperAdmin()) {
+      return { name: "admin-order" }; // Đẩy về trang Dashboard nếu là Staff
+    }
+  }
+
+  // 3. Kiểm tra đăng nhập chung
+  if (to.matched.some((record) => record.meta.requiresAuth)) {
+    if (!isAuthenticated) {
       return { name: "login" };
     }
   }

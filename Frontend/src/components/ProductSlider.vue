@@ -18,17 +18,17 @@
         :value="index"
       >
         <v-row density="compact" class="w-100 h-100 ma-0">
-          <v-col cols="12" md="5" class="bg-grey-lighten-3">
-            <div class="h-100 d-flex align-center justify-center pa-6">
+          <v-col cols="12" md="5" class="bg-grey-lighten-3 pa-0">
+            <div
+              class="h-100 d-flex align-center justify-center pa-4 image-container"
+            >
               <v-img
                 :src="
                   product.thumbnail ||
                   'https://placehold.co/600x600?text=No+Image'
                 "
-                class="rounded-lg shadow-lg"
-                cover
-                height="100%"
-                width="100%"
+                class="rounded-lg shadow-lg slider-img"
+                contain
               />
             </div>
           </v-col>
@@ -36,45 +36,39 @@
           <v-col
             cols="12"
             md="7"
-            class="py-10 px-10 d-flex flex-column justify-center custom-bg text-white"
+            class="pa-0 d-flex flex-column justify-center custom-bg text-white"
           >
-            <v-chip
-              v-if="product.active_discount > 0"
-              color="red-lighten-1"
-              class="mb-4 align-self-start font-weight-bold"
-            >
-              Đang Sale -{{ product.active_discount }}%
-            </v-chip>
+            <div class="content-inner px-8 py-6">
+              <h2 class="text-h4 font-weight-bold mb-3 line-clamp-2">
+                {{ product.name }}
+              </h2>
 
-            <h2 class="text-h3 font-weight-bold mb-4 line-clamp-2">
-              {{ product.name }}
-            </h2>
+              <p class="text-body-2 mb-2 text-white">
+                Thương hiệu:
+                <span class="font-weight-bold">{{
+                  product.brand_name || "Khác"
+                }}</span>
+              </p>
 
-            <p class="text-h6 mb-2 text-white">
-              Thương hiệu:
-              <span class="font-weight-bold">{{
-                product.brand_name || "Khác"
-              }}</span>
-            </p>
+              <p class="text-body-2 mb-6 text-white line-clamp-2">
+                {{
+                  product.description ||
+                  "Khám phá ngay sản phẩm thể thao chất lượng cao giúp bạn bứt phá giới hạn của bản thân."
+                }}
+              </p>
 
-            <p class="text-body-1 mb-8 text-white line-clamp-3">
-              {{
-                product.description ||
-                "Khám phá ngay sản phẩm thể thao chất lượng cao giúp bạn bứt phá giới hạn của bản thân."
-              }}
-            </p>
-
-            <div>
-              <v-btn
-                :to="`/product/${product.id}`"
-                color="white"
-                variant="outlined"
-                size="x-large"
-                class="text-capitalize font-weight-bold px-8 rounded-pill hover-btn-white"
-              >
-                Xem chi tiết
-                <v-icon right class="ml-2">mdi-arrow-right</v-icon>
-              </v-btn>
+              <div>
+                <v-btn
+                  :to="`/product/${product.id}`"
+                  color="white"
+                  variant="outlined"
+                  size="large"
+                  class="text-capitalize font-weight-bold px-6 rounded-pill hover-btn-white"
+                >
+                  Xem Chi Tiết
+                  <v-icon right class="ml-2">mdi-arrow-right</v-icon>
+                </v-btn>
+              </div>
             </div>
           </v-col>
         </v-row>
@@ -107,7 +101,7 @@ const fetchRandomProducts = async () => {
     if (products && products.length > 0) {
       const activeProducts = products.filter((p) => p.status === "active");
       const shuffled = [...activeProducts].sort(() => 0.5 - Math.random());
-      featuredProducts.value = shuffled.slice(0, 3);
+      featuredProducts.value = shuffled.slice(0, 5);
     }
   } catch (error) {
     console.error("Lỗi khi tải slider:", error);
@@ -124,10 +118,41 @@ onMounted(() => {
   background-color: #001a2d !important;
 }
 
+.image-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* Ép thẻ img bên trong Vuetify luôn giữ tỉ lệ, thu gọn vào giữa, không xén viền */
+:deep(.slider-img .v-img__img) {
+  object-fit: contain !important;
+}
+
+.slider-img {
+  width: 100%;
+  height: 100%;
+  max-height: 400px; /* Hạn chế chiều cao tối đa để ảnh không tràn ra ngoài carousel */
+}
+
+.content-inner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Sửa từ flex-start thành center để căn giữa toàn bộ chữ theo chiều dọc */
+  width: 100%;
+  height: 100%;
+}
+
 .hover-btn-white:hover {
   background-color: white !important;
   color: #001a2d !important;
   transition: all 0.3s ease;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
 }
 
 .line-clamp-2 {
@@ -136,12 +161,14 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
+
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
+
 :deep(.v-window__container) {
   transition: transform 1.2s cubic-bezier(0.25, 0.8, 0.5, 1) !important;
 }

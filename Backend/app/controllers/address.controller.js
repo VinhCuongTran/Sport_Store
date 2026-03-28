@@ -35,10 +35,12 @@ exports.create = asyncHandler(async (req, res) => {
 exports.update = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
-  const { receiver_name, phone_number, shipping_address, is_default } = req.body;
+  const { receiver_name, phone_number, shipping_address, is_default } =
+    req.body;
 
   const address = await Address.getById(id);
-  if (!address || address.user_id !== userId) throw new ApiError(404, "Không tìm thấy địa chỉ");
+  if (!address || address.user_id !== userId)
+    throw new ApiError(404, "Không tìm thấy địa chỉ");
 
   if (is_default) await Address.unsetDefault(userId);
 
@@ -56,7 +58,8 @@ exports.delete = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
   const address = await Address.getById(id);
-  if (!address || address.user_id !== userId) throw new ApiError(404, "Không tìm thấy địa chỉ");
+  if (!address || address.user_id !== userId)
+    throw new ApiError(404, "Không tìm thấy địa chỉ");
 
   if (address.is_default)
     throw new ApiError(
@@ -73,7 +76,8 @@ exports.setDefault = asyncHandler(async (req, res) => {
   const userId = req.user.id;
 
   const address = await Address.getById(id);
-  if (!address || address.user_id !== userId) throw new ApiError(404, "Không tìm thấy địa chỉ");
+  if (!address || address.user_id !== userId)
+    throw new ApiError(404, "Không tìm thấy địa chỉ");
 
   await Address.unsetDefault(userId);
   await Address.update(id, { is_default: true });

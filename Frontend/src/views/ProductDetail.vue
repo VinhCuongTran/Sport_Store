@@ -12,7 +12,7 @@
     </v-container>
 
     <v-container v-else-if="product" class="max-w-7xl">
-      <div class="mb-4">
+      <div class="mb-4 breadcrumb-wrapper">
         <v-breadcrumbs
           :items="breadcrumbItems"
           class="px-0 py-0 text-caption text-grey-darken-1 text-uppercase"
@@ -122,22 +122,85 @@
               >
             </div>
 
-            <div class="price-block d-flex align-center gap-3 mb-6">
-              <span
-                v-if="product.active_discount > 0"
-                class="text-h5 font-weight-bold text-red"
-              >
-                {{ formatPrice(discountedPrice) }}
-              </span>
-              <span
-                :class="[
-                  product.active_discount > 0
-                    ? 'text-decoration-line-through text-grey text-subtitle-1'
-                    : 'text-h5 font-weight-bold text-black',
-                ]"
-              >
-                {{ formatPrice(currentOriginalPrice) }}
-              </span>
+            <div class="price-block mb-6 d-flex flex-column align-start">
+              <template v-if="product && product.active_discount > 0">
+                <div class="d-flex align-center mb-1" style="gap: 8px">
+                  <span
+                    class="text-subtitle-1 text-decoration-line-through text-grey-darken-1 font-weight-medium"
+                  >
+                    {{ formatPrice(currentOriginalPrice) }}
+                  </span>
+                  <v-chip
+                    color="red"
+                    variant="flat"
+                    size="small"
+                    class="font-weight-bold"
+                  >
+                    -{{ product.active_discount }}%
+                  </v-chip>
+                </div>
+
+                <div class="custom-price-red">
+                  {{ formatPrice(discountedPrice) }}
+                </div>
+              </template>
+
+              <template v-else>
+                <div class="custom-price-red">
+                  {{ formatPrice(currentOriginalPrice) }}
+                </div>
+              </template>
+            </div>
+
+            <!-- Voucher section -->
+            <div
+              v-if="availableVouchers.length > 0"
+              class="voucher-section mb-4"
+            >
+              <div class="d-flex align-center mb-2">
+                <v-icon
+                  icon="mdi-ticket-percent-outline"
+                  size="small"
+                  class="mr-1 text-orange-darken-2"
+                ></v-icon>
+                <span class="text-body-2 font-weight-bold text-orange-darken-2"
+                  >MÃ GIẢM GIÁ CÓ THỂ ÁP DỤNG</span
+                >
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <div
+                  v-for="voucher in availableVouchers"
+                  :key="voucher.code"
+                  class="voucher-card"
+                  @click="copyVoucher(voucher.code)"
+                  :title="getVoucherTooltip(voucher)"
+                >
+                  <div class="voucher-left">
+                    <v-icon
+                      icon="mdi-ticket-percent"
+                      size="14"
+                      class="mr-1"
+                    ></v-icon>
+                    <span class="voucher-code">{{ voucher.code }}</span>
+                  </div>
+                  <div class="voucher-right">
+                    <span class="voucher-discount">{{
+                      formatVoucherDiscount(voucher)
+                    }}</span>
+                  </div>
+                  <v-tooltip activator="parent" location="top">
+                    {{ getVoucherTooltip(voucher) }}
+                  </v-tooltip>
+                </div>
+              </div>
+              <p class="text-caption text-grey-darken-1 mt-1">
+                <v-icon
+                  icon="mdi-cursor-pointer"
+                  size="12"
+                  class="mr-1"
+                ></v-icon>
+                Nhấn vào mã để sao chép
+              </p>
             </div>
 
             <v-divider class="mb-6"></v-divider>
@@ -732,7 +795,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
@@ -746,6 +809,44 @@ const isLoading = ref(true);
 const isAddingToCart = ref(false);
 const product = ref(null);
 const quantity = ref(1);
+
+const availableVouchers = computed(() => {
+  const vouchers = product.value?.available_vouchers || [];
+  // Lọc voucher hợp lệ với giá hiện tại
+  return vouchers.filter((v) => {
+    const minOrder = Number(v.min_order_value) || 0;
+    return currentOriginalPrice.value >= minOrder;
+  });
+});
+
+const formatVoucherDiscount = (voucher) => {
+  if (voucher.discount_type === "percent") {
+    const maxDiscount = voucher.max_discount
+      ? ` (tối đa ${formatPrice(voucher.max_discount)})`
+      : "";
+    return `-${voucher.discount_value}%${maxDiscount}`;
+  }
+  return `-${formatPrice(voucher.discount_value)}`;
+};
+
+const getVoucherTooltip = (voucher) => {
+  const minOrder = Number(voucher.min_order_value) || 0;
+  const endDate = new Date(voucher.end_date).toLocaleDateString("vi-VN");
+  const minOrderText =
+    minOrder > 0 ? `Đơn tối thiểu ${formatPrice(minOrder)}. ` : "";
+  return `${minOrderText}HSD: ${endDate}`;
+};
+
+const copyVoucher = (code) => {
+  navigator.clipboard
+    .writeText(code)
+    .then(() => {
+      showMessage(`Đã sao chép mã "${code}"!`, "success");
+    })
+    .catch(() => {
+      showMessage(`Mã: ${code}`, "info");
+    });
+};
 
 const reviews = ref([]);
 const relatedProducts = ref([]);
@@ -775,11 +876,12 @@ const sizeWeight = {
 };
 
 import shoeSizeGuide from "@/assets/Shoe_size_guide.jpg";
-import BadmintonRacketSizeGuide from "@/assets/Badminton_Racket_Guide.webp";
+import BadmintonRacketSizeGuide from "@/assets/Badminton_Racket_Guide.jpg";
 import Basketball_Ball_Size_Guide from "@/assets/Basketball_Ball_Size_Guide.png";
 import Basketball_Cap_Size_Guide from "@/assets/Basketball_Cap_Size_Guide.jpg";
 import clothesSizeGuide from "@/assets/Clothes_Size_Guide.png";
 import Football_Goalkeeper_Size_Guide from "@/assets/Football_Goalkeeper_Size_Guide.png";
+import Helmet_Size_Guide from "@/assets/Helmet_Size_Guide.webp";
 
 const currentSizeGuideImg = computed(() => {
   if (!product.value) return defaultSizeGuide;
@@ -801,6 +903,8 @@ const currentSizeGuideImg = computed(() => {
       return clothesSizeGuide;
     case fullCategory.includes("mũ bóng rổ"):
       return Basketball_Cap_Size_Guide;
+    case fullCategory.includes("mũ bảo hiểm"):
+      return Helmet_Size_Guide;
     case fullCategory.includes("bóng"):
       return Basketball_Ball_Size_Guide;
     default:
@@ -863,6 +967,7 @@ watch(selectedImageIndex, (newVal) => {
   }
 });
 
+// Sửa lại một chút trong hàm fetchProductDetail()
 const fetchProductDetail = async () => {
   isLoading.value = true;
   try {
@@ -873,13 +978,16 @@ const fetchProductDetail = async () => {
     if (uniqueColors.value.length > 0) {
       selectColor(uniqueColors.value[0]);
     } else {
+      // Sửa lại điều kiện check is_thumbnail ở đây
       const sortedImages = [...productImages.value].sort((a, b) => {
-        const isThumbA = a.is_thumbnail ? 1 : 0;
-        const isThumbB = b.is_thumbnail ? 1 : 0;
+        const isThumbA = a.is_thumbnail == 1 || a.is_thumbnail === true ? 1 : 0;
+        const isThumbB = b.is_thumbnail == 1 || b.is_thumbnail === true ? 1 : 0;
         return isThumbB - isThumbA;
       });
 
-      currentGallery.value = sortedImages.map((img) => img.image_url);
+      currentGallery.value = sortedImages.map(
+        (img) => img.image_url || img.url || img,
+      );
       mainImage.value =
         currentGallery.value[0] || "https://placehold.co/600x600?text=No+Image";
     }
@@ -898,20 +1006,40 @@ const uniqueColors = computed(() => [
   ...new Set((product.value?.variants || []).map((v) => v.color)),
 ]);
 
+// Thay thế đoạn code tương ứng trong script setup của ProductDetail.vue
+
 const getColorImages = (color) => {
-  const allImgs = productImages.value;
-  const filtered = allImgs.filter((img) => img.color === color);
+  const allImgs = productImages.value || [];
 
-  if (filtered.length === 0)
+  // 1. Lọc ảnh theo màu (Xử lý an toàn: bỏ khoảng trắng 2 đầu và đưa về chữ thường)
+  const safeColor = color ? String(color).trim().toLowerCase() : "";
+  let filtered = allImgs.filter((img) => {
+    const imgColor = img.color ? String(img.color).trim().toLowerCase() : "";
+    return imgColor === safeColor;
+  });
+
+  // 2. Nếu màu này không có ảnh nào, dùng toàn bộ ảnh chung
+  // LƯU Ý: Phải dùng [...allImgs] để clone mảng, tránh làm xáo trộn mảng gốc khi sort
+  if (filtered.length === 0) {
+    filtered = [...allImgs];
+  }
+
+  // 3. Nếu data hoàn toàn không có ảnh
+  if (filtered.length === 0) {
+    if (product.value?.image_url) return [product.value.image_url];
+    if (product.value?.image) return [product.value.image];
     return ["https://placehold.co/600x600?text=No+Image"];
+  }
 
+  // 4. Sắp xếp ưu tiên ảnh thumbnail
+  // So sánh lỏng (== 1) để bắt được cả số 1, chuỗi "1", hoặc boolean true
   filtered.sort((a, b) => {
-    const isThumbA = a.is_thumbnail ? 1 : 0;
-    const isThumbB = b.is_thumbnail ? 1 : 0;
+    const isThumbA = a.is_thumbnail == 1 || a.is_thumbnail === true ? 1 : 0;
+    const isThumbB = b.is_thumbnail == 1 || b.is_thumbnail === true ? 1 : 0;
     return isThumbB - isThumbA;
   });
 
-  return filtered.map((img) => img.image_url);
+  return filtered.map((img) => img.image_url || img.url || img);
 };
 
 const selectColor = (color) => {
@@ -1103,6 +1231,51 @@ watch(
 .min-vh-100 {
   min-height: 100vh;
 }
+
+/* Voucher Section */
+.voucher-section {
+  background: #fffde7;
+  border: 1px dashed #f9a825;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+.voucher-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1.5px dashed #f57c00;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.voucher-card:hover {
+  background: #fff3e0;
+  border-color: #e65100;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(245, 124, 0, 0.2);
+}
+.voucher-left {
+  display: flex;
+  align-items: center;
+  color: #e65100;
+}
+.voucher-code {
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  color: #e65100;
+}
+.voucher-discount {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #d32f2f;
+  background: #ffebee;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
 .max-w-7xl {
   max-width: 1280px;
   margin: 0 auto;
@@ -1259,5 +1432,32 @@ watch(
   height: 6px;
   background-color: #000;
   border-radius: 50%;
+}
+
+.custom-price-red {
+  font-size: 36px !important; /* Kích thước to hơn card (24px) để phù hợp trang chi tiết */
+  font-weight: 900 !important;
+  color: #e53935 !important;
+  line-height: 1.2 !important;
+  /* Bỏ text-align: center để giá nằm gọn gàng bên trái theo đúng layout của trang chi tiết */
+}
+
+.breadcrumb-wrapper {
+  width: 100%;
+  overflow: hidden;
+}
+
+.breadcrumb-wrapper :deep(.v-breadcrumbs) {
+  flex-wrap: nowrap !important; /* Cấm tự động rớt dòng */
+  overflow: hidden;
+}
+
+.breadcrumb-wrapper :deep(.v-breadcrumbs-item) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px; /* Bạn có thể tăng/giảm số này để chỉnh độ dài tối đa của 1 mục trước khi bị cắt thành ... */
+  display: inline-block;
+  vertical-align: bottom;
 }
 </style>

@@ -28,7 +28,7 @@
             >
               Thống kê Tổng quan
             </h2>
-            <span class="text-caption text-indigo-darken-4""
+            <span class="text-caption text-indigo-darken-4"
               >Báo cáo doanh thu và tình trạng đơn hàng</span
             >
           </div>
@@ -166,11 +166,11 @@
           class="text-h6 font-weight-bold text-indigo-darken-4"
           style="line-height: 1.2"
         >
-          Sản phẩm sắp hết hàng 
+          Sản phẩm sắp hết hàng
         </h2>
       </div>
 
-      <div class="px-2 pb-2">
+      <div class="px-2 pb-2" ref="tableContainer">
         <v-table hover class="rounded-xl overflow-hidden bg-white border">
           <thead>
             <tr
@@ -206,7 +206,7 @@
           </thead>
           <tbody>
             <tr
-              v-for="(item, index) in stats.lowStockProducts"
+              v-for="(item, index) in visibleProducts"
               :key="index"
               class="table-row"
             >
@@ -266,13 +266,40 @@
             </tr>
           </tbody>
         </v-table>
+
+        <div
+          class="mt-4 mb-2 text-center"
+          v-if="stats.lowStockProducts?.length > pageSize"
+        >
+          <v-btn
+            v-if="displayCount < stats.lowStockProducts.length"
+            variant="text"
+            size="small"
+            color="indigo-darken-4"
+            class="text-none font-weight-bold"
+            @click="showMore"
+          >
+            + Xem thêm ({{ stats.lowStockProducts.length - displayCount }} sản
+            phẩm)
+          </v-btn>
+          <v-btn
+            v-if="displayCount > pageSize"
+            variant="text"
+            size="small"
+            color="grey-darken-2"
+            class="text-none font-weight-bold ml-2"
+            @click="showLess"
+          >
+            - Thu gọn
+          </v-btn>
+        </div>
       </div>
     </v-card>
   </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, onBeforeUnmount, nextTick } from "vue";
 import Loading from "@/components/Loading.vue";
 import api from "@/services/api.service";
 
@@ -284,6 +311,55 @@ const stats = ref({
   lowStockProducts: [],
 });
 
+// Xử lý hiển thị danh sách cuộn động
+const tableContainer = ref(null);
+const pageSize = ref(5); // Sẽ được cập nhật động
+const displayCount = ref(5);
+
+const visibleProducts = computed(() => {
+  return stats.value.lowStockProducts?.slice(0, displayCount.value) || [];
+});
+
+const calculatePageSize = () => {
+  if (tableContainer.value) {
+    // Lấy vị trí top của bảng so với viewport
+    const rect = tableContainer.value.getBoundingClientRect();
+
+    // Chiều cao trống còn lại (trừ đi header bảng khoảng 50px và padding đáy khoảng 100px)
+    const availableSpace = window.innerHeight - rect.top - 150;
+
+    // Ước tính chiều cao mỗi hàng là 55px
+    let calculatedRows = Math.floor(availableSpace / 55);
+
+    // Đảm bảo luôn hiển thị tối thiểu 3 dòng để không bị lỗi UI trên màn hình quá bé
+    pageSize.value = Math.max(3, calculatedRows);
+
+    // Nếu là lần đầu hoặc đang ở chế độ thu gọn thì set lại số lượng hiển thị bằng pageSize mới
+    if (
+      displayCount.value < pageSize.value ||
+      displayCount.value === pageSize.value
+    ) {
+      displayCount.value = pageSize.value;
+    }
+  }
+};
+
+const showMore = () => {
+  // Mỗi lần ấn thêm sẽ xổ ra đúng số lượng bằng với list ban đầu
+  displayCount.value += pageSize.value;
+};
+
+const showLess = () => {
+  displayCount.value = pageSize.value;
+  // Cuộn mượt mà lên lại đầu bảng khi thu gọn
+  if (tableContainer.value) {
+    tableContainer.value.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  }
+};
+
 const formatPrice = (val) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
     val || 0,
@@ -294,6 +370,11 @@ const fetchStats = async () => {
   try {
     const response = await api.get("/stats");
     stats.value = response.data;
+
+    // Tính toán lại kích thước hiển thị sau khi dữ liệu đã render vào DOM
+    nextTick(() => {
+      setTimeout(calculatePageSize, 100);
+    });
   } catch (error) {
     console.error("Lỗi khi tải thống kê:", error);
     alert("Không thể tải dữ liệu thống kê!");
@@ -304,6 +385,12 @@ const fetchStats = async () => {
 
 onMounted(() => {
   fetchStats();
+  // Cập nhật lại tính toán khi người dùng thay đổi kích thước cửa sổ trình duyệt
+  window.addEventListener("resize", calculatePageSize);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", calculatePageSize);
 });
 </script>
 

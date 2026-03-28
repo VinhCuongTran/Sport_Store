@@ -79,24 +79,15 @@
         no-data-text="Chưa có môn thể thao nào"
       >
         <template v-slot:item.id="{ item }">
-          <span class="font-weight-black text-indigo-darken-4"
-            >#{{ item.id }}</span
-          >
+          <span class="font-weight-black text-indigo-darken-4">{{ item.id }}</span>
         </template>
 
         <template v-slot:item.name="{ item }">
-          <div class="d-flex align-center gap-2">
-            <v-icon color="indigo-darken-3" size="18">mdi-run-fast</v-icon>
+          <div class="d-flex align-center gap-2"> 
             <span class="text-body-2 font-weight-bold text-black">{{
               item.name
             }}</span>
           </div>
-        </template>
-
-        <template v-slot:item.created_at="{ item }">
-          <span class="text-body-2 text-black">{{
-            formatDate(item.created_at)
-          }}</span>
         </template>
 
         <template v-slot:item.actions="{ item }">
@@ -218,10 +209,10 @@ const dialog = ref({ show: false, isEdit: false });
 const form = ref({ name: "" });
 const editingId = ref(null);
 
+// ĐÃ XÓA CỘT NGÀY TẠO Ở ĐÂY
 const headers = [
   { title: "ID", key: "id", width: "100px", align: "center" },
   { title: "Tên môn thể thao", key: "name", align: "start" },
-  { title: "Ngày tạo", key: "created_at", align: "center", width: "180px" },
   {
     title: "Thao tác",
     key: "actions",
@@ -233,16 +224,6 @@ const headers = [
 
 const showMessage = (text, color = "success") => {
   snackbar.value = { show: true, text, color };
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
-  const d = new Date(dateString);
-  return (
-    d.toLocaleDateString("vi-VN") +
-    " " +
-    d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-  );
 };
 
 const fetchSports = async () => {
@@ -331,6 +312,7 @@ onMounted(() => {
   gap: 12px;
 }
 
+/* CSS Tùy chỉnh màu Gradient và font chữ cho Header của Data Table */
 :deep(.v-data-table th.v-data-table__th) {
   background: linear-gradient(90deg, #e8eaf6 0%, #f3f4f6 100%) !important;
   color: #283593 !important;

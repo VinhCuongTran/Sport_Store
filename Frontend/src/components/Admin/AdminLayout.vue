@@ -26,6 +26,7 @@
         </v-list-subheader>
 
         <v-list-item
+          v-if="isSuperAdmin"
           prepend-icon="mdi-chart-line"
           title="Thống kê"
           :to="{ name: 'admin-stats' }"
@@ -66,6 +67,7 @@
         ></v-list-item>
 
         <v-list-item
+          v-if="isSuperAdmin"
           prepend-icon="mdi-account-group"
           title="Quản lý Người dùng"
           :to="{ name: 'admin-user' }"
@@ -86,6 +88,7 @@
         ></v-list-item>
 
         <v-list-item
+          v-if="isSuperAdmin"
           prepend-icon="mdi-ticket-percent"
           title="Quản lý Voucher"
           :to="{ name: 'admin-voucher' }"
@@ -131,10 +134,14 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import AdminHeader from "./AdminHeader.vue";
+import AuthService from "@/services/auth.service"; // Nhúng auth service
 
 const drawer = ref(true);
+
+// Kiểm tra có phải Super Admin không
+const isSuperAdmin = computed(() => AuthService.isSuperAdmin());
 </script>
 
 <style scoped>
