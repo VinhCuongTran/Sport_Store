@@ -1,6 +1,5 @@
 <template>
   <div class="auth-wrapper">
-    <!-- Background decoration -->
     <div class="bg-orb bg-orb--1"></div>
     <div class="bg-orb bg-orb--2"></div>
     <div class="bg-orb bg-orb--3"></div>
@@ -10,6 +9,23 @@
       :class="{ 'right-panel-active': isSignUp }"
       id="container"
     >
+      <v-btn
+        to="/"
+        prepend-icon="mdi-arrow-left"
+        variant="text"
+        color="#001a2d"
+        density="compact"
+        class="position-absolute"
+        style="
+          top: 15px;
+          left: 15px;
+          z-index: 110;
+          text-transform: none;
+          font-weight: 600;
+        "
+      >
+        Trang chủ
+      </v-btn>
       <div class="form-container sign-up-container">
         <div class="form-inner">
           <div class="form-head">
