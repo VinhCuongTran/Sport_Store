@@ -411,7 +411,12 @@
 
 <script setup>
 import { ref, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import OrderService from "@/services/order.service";
+
+// Khởi tạo router và route
+const route = useRoute();
+const router = useRouter();
 
 const orders = ref([]);
 const isLoading = ref(false);
@@ -502,6 +507,18 @@ const fetchOrders = async () => {
       ...o,
       customer: `${o.receiver_name} ${o.phone_number}`,
     }));
+
+    // Tự động mở modal nếu trên URL có chứa tham số open_order
+    if (route.query.open_order) {
+      // ĐÃ SỬA: Bỏ parseInt() để nhận mã đơn hàng dạng chuỗi ký tự (ví dụ: u3vzvk)
+      const orderIdToOpen = route.query.open_order;
+
+      if (orderIdToOpen) {
+        await openModal(orderIdToOpen);
+        // Xóa tham số khỏi URL để khi F5 không bị tự động mở lại
+        router.replace({ query: {} });
+      }
+    }
   } catch (error) {
     showMessage("Lỗi khi tải danh sách đơn hàng", "error");
   } finally {
@@ -545,6 +562,17 @@ const updateStatus = async () => {
     isUpdating.value = false;
   }
 };
+
+watch(
+  () => route.query.open_order,
+  async (newOrderId) => {
+    if (newOrderId) {
+      await openModal(newOrderId);
+      // Xóa query trên URL sau khi mở xong để reset trạng thái
+      router.replace({ query: {} });
+    }
+  }
+);
 
 onMounted(() => fetchOrders());
 </script>

@@ -10,14 +10,17 @@ const Order = {
       const orderId = generateId();
       await connection.query(
         `INSERT INTO orders 
-        (id, user_id, voucher_id, subtotal, discount_amount, total_price, receiver_name, phone_number, shipping_address, payment_method, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        (id, user_id, voucher_id, shipping_voucher_id, subtotal, shipping_fee, discount_amount, shipping_discount, total_price, receiver_name, phone_number, shipping_address, payment_method, status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
         [
           orderId,
           orderData.user_id,
           orderData.voucher_id || null,
+          orderData.shipping_voucher_id || null,
           orderData.subtotal,
+          orderData.shipping_fee || 0,
           orderData.discount_amount || 0,
+          orderData.shipping_discount || 0,
           orderData.total_price,
           orderData.receiver_name,
           orderData.phone_number,
@@ -50,12 +53,23 @@ const Order = {
           }
         }
       }
+
+      // Tăng lượt sử dụng cho Voucher Sản phẩm
       if (orderData.voucher_id) {
         await connection.query(
           `UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?`,
           [orderData.voucher_id],
         );
       }
+
+      // Tăng lượt sử dụng cho Voucher Vận chuyển
+      if (orderData.shipping_voucher_id) {
+        await connection.query(
+          `UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?`,
+          [orderData.shipping_voucher_id],
+        );
+      }
+
       await connection.commit();
       return orderId;
     } catch (error) {
@@ -68,37 +82,67 @@ const Order = {
 
   getAll: async () => {
     const [rows] = await db.query(`
-      SELECT o.*, u.name as customer_name, v.code as voucher_code
+      SELECT o.*, u.name as customer_name, v1.code as voucher_code, v2.code as shipping_voucher_code
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN vouchers v ON o.voucher_id = v.id
+      LEFT JOIN vouchers v1 ON o.voucher_id = v1.id
+      LEFT JOIN vouchers v2 ON o.shipping_voucher_id = v2.id
       ORDER BY o.created_at DESC
     `);
     return rows;
   },
 
   getByUserId: async (userId) => {
-    const [rows] = await db.query(
+    const [orders] = await db.query(
       `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC`,
       [userId],
     );
-    return rows;
+
+    for (let order of orders) {
+      const [items] = await db.query(
+        `SELECT oi.*, p.name as product_name, pv.size, pv.color,
+          (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as image_url,
+          EXISTS(SELECT 1 FROM reviews r WHERE r.user_id = ? AND r.product_id = oi.product_id) as is_reviewed
+         FROM order_items oi
+         JOIN products p ON oi.product_id = p.id
+         LEFT JOIN product_variants pv ON oi.variant_id = pv.id
+         WHERE oi.order_id = ?`,
+        [userId, order.id], // Đưa userId vào đây cho dấu ? đầu tiên
+      );
+
+      order.items = items.map((item) => ({
+        ...item,
+        is_reviewed: !!item.is_reviewed,
+      }));
+    }
+
+    return orders;
   },
 
   getById: async (id) => {
     const [orders] = await db.query(`SELECT * FROM orders WHERE id = ?`, [id]);
     if (orders.length === 0) return null;
 
+    // Lấy user_id từ đơn hàng vừa tìm được
+    const orderUserId = orders[0].user_id;
+
     const [items] = await db.query(
-      `SELECT oi.*, p.name as product_name, pv.size, pv.color 
+      `SELECT oi.*, p.name as product_name, pv.size, pv.color,
+        (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as image_url,
+        EXISTS(SELECT 1 FROM reviews r WHERE r.user_id = ? AND r.product_id = oi.product_id) as is_reviewed
        FROM order_items oi
        JOIN products p ON oi.product_id = p.id
        LEFT JOIN product_variants pv ON oi.variant_id = pv.id
        WHERE oi.order_id = ?`,
-      [id],
+      [orderUserId, id], // Truyền orderUserId vào cho dấu ? đầu tiên
     );
 
-    return { ...orders[0], items };
+    const formattedItems = items.map((item) => ({
+      ...item,
+      is_reviewed: !!item.is_reviewed,
+    }));
+
+    return { ...orders[0], items: formattedItems };
   },
 
   updateStatus: async (id, status, payment_status, staffId = null) => {
@@ -149,10 +193,19 @@ const Order = {
         }
       }
 
+      // Hoàn lượt dùng Voucher sản phẩm
       if (order.voucher_id) {
         await connection.query(
           `UPDATE vouchers SET used_count = used_count - 1 WHERE id = ? AND used_count > 0`,
           [order.voucher_id],
+        );
+      }
+
+      // Hoàn lượt dùng Voucher vận chuyển
+      if (order.shipping_voucher_id) {
+        await connection.query(
+          `UPDATE vouchers SET used_count = used_count - 1 WHERE id = ? AND used_count > 0`,
+          [order.shipping_voucher_id],
         );
       }
 

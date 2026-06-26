@@ -32,6 +32,91 @@
 
     <v-spacer></v-spacer>
 
+    <v-menu
+      v-model="showNotifications"
+      location="bottom end"
+      transition="scale-transition"
+      :close-on-content-click="false"
+    >
+      <template v-slot:activator="{ props }">
+        <v-btn icon color="white" v-bind="props" class="mr-3">
+          <v-badge
+            :content="unreadCount"
+            :model-value="unreadCount > 0"
+            color="red-lighten-1"
+            floating
+          >
+            <v-icon>mdi-bell</v-icon>
+          </v-badge>
+        </v-btn>
+      </template>
+
+      <v-card min-width="320" max-width="360" rounded="lg" elevation="8">
+        <v-card-title
+          class="d-flex justify-space-between align-center text-subtitle-1 font-weight-bold bg-indigo-darken-4 text-white pa-3"
+        >
+          Thông báo
+          <v-chip
+            v-if="unreadCount > 0"
+            size="x-small"
+            color="white"
+            text-color="indigo-darken-4"
+            class="font-weight-bold"
+          >
+            {{ unreadCount }} mới
+          </v-chip>
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-list lines="two" max-height="400" class="overflow-y-auto pa-0">
+          <v-list-item
+            v-if="notifications.length === 0"
+            class="text-center pa-4 text-grey"
+          >
+            Không có thông báo nào
+          </v-list-item>
+          <v-list-item
+            v-for="notify in notifications"
+            :key="notify.id"
+            :class="{ 'bg-grey-lighten-4': !notify.is_read }"
+            @click="handleNotificationClick(notify)"
+            link
+          >
+            <template v-slot:prepend>
+              <v-avatar
+                :color="notify.type === 'new_order' ? 'success' : 'primary'"
+                size="36"
+              >
+                <v-icon color="white" size="20">
+                  {{
+                    notify.type === "new_order"
+                      ? "mdi-shopping"
+                      : "mdi-bell-outline"
+                  }}
+                </v-icon>
+              </v-avatar>
+            </template>
+            <v-list-item-title
+              class="text-subtitle-2 font-weight-bold mb-1"
+              :class="{
+                'text-black': !notify.is_read,
+                'text-grey-darken-2': notify.is_read,
+              }"
+            >
+              {{ notify.title }}
+            </v-list-item-title>
+            <v-list-item-subtitle class="text-caption">
+              {{ notify.message }}
+            </v-list-item-subtitle>
+            <template v-slot:append>
+              <v-icon v-if="!notify.is_read" color="blue-lighten-1" size="12"
+                >mdi-circle</v-icon
+              >
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-card>
+    </v-menu>
+
     <v-btn
       prepend-icon="mdi-home"
       variant="tonal"
@@ -76,19 +161,112 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { useToast } from "vue-toastification";
+import { io } from "socket.io-client"; // Import socket.io-client
 import AuthService from "../../services/auth.service";
+import NotificationService from "../../services/notification.service";
 
 const router = useRouter();
+const toast = useToast();
 const user = ref(null);
+const notifications = ref([]);
+const showNotifications = ref(false);
+let socket = null;
+
+// Tính số lượng thông báo chưa đọc
+const unreadCount = computed(() => {
+  return notifications.value.filter((n) => !n.is_read).length;
+});
+
+// Lấy danh sách thông báo khi mới load trang
+const fetchNotifications = async () => {
+  try {
+    const data = await NotificationService.getAll();
+    notifications.value = data || [];
+  } catch (error) {
+    console.error("Lỗi lấy thông báo:", error);
+  }
+};
 
 onMounted(() => {
   const userData = localStorage.getItem("user");
   if (userData) {
     user.value = JSON.parse(userData);
+    fetchNotifications();
+
+    // 1. Kết nối Socket (Nhớ đổi URL cổng Backend nếu cần)
+    socket = io("http://localhost:3000");
+
+    socket.on("connect", () => {
+      console.log("✅ Admin Socket đã kết nối thành công!");
+
+      // SỬA Ở ĐÂY: Dùng "user_connected" khớp với server.js
+      socket.emit("user_connected", user.value.id);
+    });
+
+    // SỬA Ở ĐÂY: Dùng "new_notification" khớp với server.js
+    socket.on("new_notification", (newNotify) => {
+      console.log("🔔 Có thông báo mới:", newNotify);
+
+      // Đẩy thông báo mới lên đầu danh sách chuông
+      notifications.value.unshift(newNotify);
+
+      // Phân loại màu sắc: 'warning' (màu vàng/cam) cho cảnh báo kho, 'info' (màu xanh dương) cho đơn hàng
+      const toastType = newNotify.type === "system" ? "warning" : "info";
+
+      // Hiện popup thông báo nổi
+      toast(newNotify.title + " - " + newNotify.message, {
+        position: "bottom-right", // Chuyển thông báo xuống góc dưới bên phải
+        type: toastType,          // Thay đổi màu sắc dựa theo ngữ cảnh cho đẹp mắt
+        timeout: 5000,            // Tự động tắt sau 5 giây
+        closeOnClick: true,
+        pauseOnHover: true,
+        onClick: () => {
+          // Bắt sự kiện click vào popup để chuyển hướng tới đúng trang xử lý
+          handleNotificationClick(newNotify);
+        }
+      });
+    });
   }
 });
+
+// Dọn dẹp kết nối socket khi rời khỏi component (để tránh rò rỉ bộ nhớ)
+onUnmounted(() => {
+  if (socket) {
+    socket.disconnect();
+  }
+});
+
+// Xử lý khi Admin click vào một thông báo
+const handleNotificationClick = async (notification) => {
+  try {
+    if (!notification.is_read) {
+      await NotificationService.markAsRead(notification.id);
+      notification.is_read = true;
+    }
+
+    showNotifications.value = false;
+
+    // Điều hướng và tự động mở chi tiết đơn hàng
+    if (notification.type === "new_order" || notification.type === "order") {
+      router.push({
+        name: "admin-order",
+        query: { open_order: notification.reference_id },
+      });
+    }
+    // 2. Nếu là cảnh báo hệ thống (Sắp hết hàng) -> Điều hướng tới trang Sắp hết hàng & mở form
+    else if (notification.type === "system") {
+      router.push({
+        name: "admin-low-stock",
+        query: { open_import: notification.reference_id } // <-- Thêm dòng này
+      });
+    }
+  } catch (error) {
+    console.error("Lỗi khi click thông báo:", error);
+  }
+};
 
 const handleLogout = () => {
   AuthService.logout();

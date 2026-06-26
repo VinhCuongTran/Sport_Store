@@ -187,6 +187,29 @@ const Product = {
       message: "Đã xóa sản phẩm và dọn sạch hình ảnh thành công",
     });
   }),
+
+  // Thêm API xử lý Nhập kho
+  importStock: asyncHandler(async (req, res) => {
+    const variantId = req.params.id; // Lấy ID biến thể từ URL
+    const { quantity_added, import_price, note } = req.body;
+
+    if (!quantity_added || quantity_added <= 0) {
+      throw new ApiError(400, "Số lượng nhập phải lớn hơn 0");
+    }
+
+    if (import_price < 0) {
+      throw new ApiError(400, "Giá nhập không được là số âm");
+    }
+
+    await ProductModel.importStock(
+      variantId,
+      quantity_added,
+      import_price || 0,
+      note || "Nhập hàng từ Admin",
+    );
+
+    res.json({ message: "Lưu phiếu nhập kho thành công" });
+  }),
 };
 
 module.exports = Product;

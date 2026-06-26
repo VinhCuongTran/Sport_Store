@@ -24,11 +24,12 @@ const StatsController = {
     );
     const cancelledOrders = cancelResult[0].count || 0;
 
+    // SỬA ĐOẠN NÀY TRONG getOverview
     const [lowStockResult] = await db.query(
-      `SELECT p.name as product_name, pv.size, pv.color, pv.stock 
+      `SELECT p.id as product_id, p.name as product_name, pv.id as variant_id, pv.size, pv.color, pv.stock 
        FROM product_variants pv 
        JOIN products p ON pv.product_id = p.id 
-       WHERE pv.stock < 10 
+       WHERE pv.stock <= 5 
        ORDER BY pv.stock ASC`,
     );
 
@@ -38,6 +39,20 @@ const StatsController = {
       cancelledOrders,
       lowStockProducts: lowStockResult,
     });
+  }),
+  // Lấy Lịch sử Nhập/Xuất Kho
+  getInventoryLogs: asyncHandler(async (req, res) => {
+    const [logs] = await db.query(`
+      SELECT il.*, 
+             pv.size, pv.color, 
+             p.name AS product_name
+      FROM inventory_logs il
+      JOIN product_variants pv ON il.variant_id = pv.id
+      JOIN products p ON pv.product_id = p.id
+      ORDER BY il.created_at DESC
+    `);
+
+    res.json(logs);
   }),
 };
 

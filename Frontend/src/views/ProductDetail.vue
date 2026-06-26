@@ -313,6 +313,7 @@
                   "
                 ></v-btn>
               </div>
+
               <v-btn
                 color="black"
                 class="flex-grow-1 add-to-cart-btn text-body-1 font-weight-bold tracking-wide"
@@ -324,6 +325,19 @@
                 :disabled="!selectedVariant || selectedVariant.stock === 0"
               >
                 THÊM VÀO GIỎ HÀNG
+              </v-btn>
+
+              <v-btn
+                variant="outlined"
+                color="black"
+                height="54"
+                width="54"
+                rounded="0"
+                class="flex-shrink-0"
+                @click="openChatProduct"
+                title="Nhắn tin cho Shop để hỏi về sản phẩm này"
+              >
+                <v-icon>mdi-chat-processing-outline</v-icon>
               </v-btn>
             </div>
 
@@ -791,6 +805,7 @@
         </v-carousel>
       </v-card>
     </v-dialog>
+    <ChatBox ref="chatBoxRef" />
   </div>
 </template>
 
@@ -801,6 +816,8 @@ import ProductService from "@/services/product.service";
 import CartService from "@/services/cart.service";
 import ReviewService from "@/services/review.service";
 import ProductCard from "@/components/ProductCard.vue";
+import ChatBox from "@/components/Chat.vue";
+const chatBoxRef = ref(null);
 
 const route = useRoute();
 const router = useRouter();
@@ -1204,6 +1221,11 @@ const breadcrumbItems = computed(() => {
   items.push({ title: product.value.name, disabled: true });
   return items;
 });
+const openChatProduct = () => {
+  if (chatBoxRef.value && product.value) {
+    chatBoxRef.value.openChatWithProduct(product.value);
+  }
+};
 
 onMounted(() => fetchProductDetail());
 watch(

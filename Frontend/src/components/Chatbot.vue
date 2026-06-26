@@ -1,5 +1,5 @@
 <template>
-  <div class="chatbot-container">
+  <div class="chatbot-container" ref="chatbotContainerRef">
     <button class="chat-toggle-btn" @click="isOpen = !isOpen">
       <span class="btn-inner">
         <span v-if="!isOpen" class="btn-icon-wrap">
@@ -160,7 +160,38 @@ export default {
       ],
     };
   },
+  watch: {
+    isOpen(newVal) {
+      if (newVal) {
+        window.dispatchEvent(new CustomEvent("chatbot-opened"));
+      }
+    },
+  },
+  mounted() {
+    window.addEventListener("chatbox-opened", this.closeWhenChatboxOpens);
+    document.addEventListener("click", this.handleClickOutside); // Bắt sự kiện Click
+  },
+  beforeUnmount() {
+    window.removeEventListener("chatbox-opened", this.closeWhenChatboxOpens);
+    document.removeEventListener("click", this.handleClickOutside); // Gỡ sự kiện
+  },
   methods: {
+    closeWhenChatboxOpens() {
+      this.isOpen = false;
+    },
+
+    // HÀM XỬ LÝ CLICK RA NGOÀI ĐỂ ĐÓNG CHATBOT
+    handleClickOutside(event) {
+      // Nếu hộp thoại đang mở và click không nằm trong ref của component này
+      if (
+        this.isOpen &&
+        this.$refs.chatbotContainerRef &&
+        !this.$refs.chatbotContainerRef.contains(event.target)
+      ) {
+        this.isOpen = false;
+      }
+    },
+
     async sendMessage() {
       if (!this.userInput.trim()) return;
 

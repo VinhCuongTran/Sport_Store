@@ -1,6 +1,8 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./routers";
+import Toast from "vue-toastification";
+import "vue-toastification/dist/index.css";
 
 // Cấu hình Vuetify
 import "vuetify/styles";
@@ -18,5 +20,10 @@ const app = createApp(App);
 
 app.use(router);
 app.use(vuetify);
+app.use(Toast, {
+  position: "bottom-right",
+  timeout: 4000,
+  closeOnClick: true,
+});
 
 app.mount("#app");

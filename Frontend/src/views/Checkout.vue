@@ -174,7 +174,25 @@
               <span class="text-grey-darken-1">Tạm tính:</span>
               <span class="font-weight-bold">{{ formatPrice(subtotal) }}</span>
             </div>
-            <div class="d-flex justify-space-between mb-4 text-green-darken-2">
+
+            <div class="d-flex justify-space-between mb-2 text-black">
+              <span class="text-grey-darken-1">Phí vận chuyển:</span>
+              <span class="font-weight-bold">{{
+                formatPrice(shippingFee)
+              }}</span>
+            </div>
+
+            <div class="d-flex justify-space-between mb-2 text-black">
+              <span class="text-grey-darken-1">Dự kiến nhận hàng:</span>
+              <span class="font-weight-bold text-green-darken-3">{{
+                estimatedDeliveryText
+              }}</span>
+            </div>
+
+            <div
+              class="d-flex justify-space-between mb-4 text-green-darken-2"
+              v-if="discountAmount > 0"
+            >
               <span>Khuyến mãi:</span>
               <span class="font-weight-bold"
                 >-{{ formatPrice(discountAmount) }}</span
@@ -366,17 +384,59 @@ const confirmAddressSelection = () => {
   showAddressSelector.value = false;
 };
 
-const openAddressManagerFromSelector = () => {
-  showAddressSelector.value = false;
-  dialogAddresses.value = true;
-};
-
 const subtotal = computed(() =>
   checkoutItems.value.reduce(
     (total, item) => total + item.variant_price * item.quantity,
     0,
   ),
 );
+
+// TÍNH PHÍ VẬN CHUYỂN DỰA TRÊN CHUỖI ĐỊA CHỈ
+const shippingFee = computed(() => {
+  if (!selectedAddress.value) return 0;
+
+  const address = selectedAddress.value.shipping_address.toLowerCase();
+
+  if (address.includes("cần thơ")) {
+    return 15000;
+  } else if (
+    address.includes("hà nội") ||
+    address.includes("hồ chí minh") ||
+    address.includes("hcm")
+  ) {
+    return 30000;
+  } else {
+    return 35000;
+  }
+});
+
+// THÊM MỚI: TÍNH NGÀY DỰ KIẾN NHẬN HÀNG
+const estimatedDeliveryText = computed(() => {
+  const addBusinessDays = (date, days) => {
+    let result = new Date(date);
+    let added = 0;
+    while (added < days) {
+      result.setDate(result.getDate() + 1);
+      if (result.getDay() !== 0) {
+        // Bỏ qua Chủ Nhật
+        added++;
+      }
+    }
+    return result;
+  };
+
+  const now = new Date();
+  const minDate = addBusinessDays(now, 3);
+  const maxDate = addBusinessDays(now, 5);
+
+  const format = (d) => {
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${day}/${month}/${d.getFullYear()}`;
+  };
+
+  return `${format(minDate)} - ${format(maxDate)}`;
+});
 
 const discountAmount = computed(() => {
   if (!appliedVoucher.value) return 0;
@@ -395,7 +455,9 @@ const discountAmount = computed(() => {
   return discount > subtotal.value ? subtotal.value : discount;
 });
 
-const totalPrice = computed(() => subtotal.value - discountAmount.value);
+const totalPrice = computed(
+  () => subtotal.value + shippingFee.value - discountAmount.value,
+);
 
 const applyVoucher = async () => {
   if (!voucherCode.value) return;
@@ -461,6 +523,7 @@ const submitOrder = async () => {
       voucher_id: appliedVoucher.value?.id || null,
       subtotal: subtotal.value,
       discount_amount: discountAmount.value,
+      shipping_fee: shippingFee.value,
       total_price: totalPrice.value,
       is_from_cart: isFromCart.value,
       items: checkoutItems.value.map((i) => ({

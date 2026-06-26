@@ -88,20 +88,46 @@
         <template v-slot:item.code="{ item }">
           <v-chip
             size="small"
-            color="blue-darken-2"
+            :color="
+              item.discount_type.includes('shipping')
+                ? 'teal-darken-2'
+                : 'blue-darken-2'
+            "
             variant="outlined"
             class="font-weight-bold text-uppercase"
           >
-            <v-icon start size="14">mdi-ticket</v-icon>{{ item.code }}
+            <v-icon start size="14">
+              {{
+                item.discount_type.includes("shipping")
+                  ? "mdi-truck-fast"
+                  : "mdi-ticket"
+              }}
+            </v-icon>
+            {{ item.code }}
           </v-chip>
         </template>
 
         <template v-slot:item.discount="{ item }">
-          <div class="text-body-2 font-weight-bold text-red-darken-1 mb-1">
+          <div
+            class="text-body-2 font-weight-bold mb-1"
+            :class="
+              item.discount_type.includes('shipping')
+                ? 'text-teal-darken-2'
+                : 'text-red-darken-1'
+            "
+          >
             <span v-if="item.discount_type === 'percent'"
-              >Giảm {{ item.discount_value }}%</span
+              >Giảm {{ item.discount_value }}% Sản phẩm</span
             >
-            <span v-else>Giảm {{ formatPrice(item.discount_value) }}</span>
+            <span v-else-if="item.discount_type === 'fixed_amount'"
+              >Giảm {{ formatPrice(item.discount_value) }} Sản phẩm</span
+            >
+            <span v-else-if="item.discount_type === 'shipping_percent'"
+              >Giảm {{ item.discount_value }}% Phí Ship</span
+            >
+            <span v-else-if="item.discount_type === 'shipping_fixed'"
+              >Giảm {{ formatPrice(item.discount_value) }} Phí Ship</span
+            >
           </div>
           <div v-if="item.max_discount" class="text-caption text-grey-darken-2">
             (Tối đa: {{ formatPrice(item.max_discount) }})
@@ -216,6 +242,7 @@
                   placeholder="VD: SUMMER2024"
                 />
               </v-col>
+
               <v-col cols="12" md="6" class="py-1">
                 <label
                   class="text-caption font-weight-bold text-indigo-darken-3 mb-1 d-block"
@@ -226,8 +253,18 @@
                   class="custom-input text-black"
                   required
                 >
-                  <option value="percent">Giảm theo %</option>
-                  <option value="fixed_amount">Giảm số tiền cố định</option>
+                  <optgroup label="Voucher Sản Phẩm">
+                    <option value="percent">Giảm theo % Sản phẩm</option>
+                    <option value="fixed_amount">Giảm tiền mặt Sản phẩm</option>
+                  </optgroup>
+                  <optgroup label="Voucher Vận Chuyển">
+                    <option value="shipping_percent">
+                      Giảm theo % Phí Ship
+                    </option>
+                    <option value="shipping_fixed">
+                      Giảm tiền mặt Phí Ship
+                    </option>
+                  </optgroup>
                 </select>
               </v-col>
 
@@ -244,6 +281,7 @@
                   required
                 />
               </v-col>
+
               <v-col cols="12" md="6" class="py-1 mt-2">
                 <label
                   class="text-caption font-weight-bold text-indigo-darken-3 mb-1 d-block"
@@ -254,6 +292,11 @@
                   type="number"
                   class="custom-input text-black"
                   placeholder="Để trống nếu không giới hạn"
+                  :disabled="
+                    ['fixed_amount', 'shipping_fixed'].includes(
+                      formData.discount_type,
+                    )
+                  "
                 />
               </v-col>
 
@@ -506,6 +549,11 @@ const handleSave = async () => {
       usage_limit: formData.value.usage_limit || null,
     };
 
+    // Reset max_discount nếu chọn giảm số tiền cố định (để tránh lỗi cấn logic)
+    if (["fixed_amount", "shipping_fixed"].includes(payload.discount_type)) {
+      payload.max_discount = null;
+    }
+
     if (new Date(payload.start_date) >= new Date(payload.end_date)) {
       showMessage("Ngày kết thúc phải sau ngày bắt đầu!", "error");
       isLoading.value = false;
@@ -579,6 +627,10 @@ onMounted(() => {
 select.custom-input,
 input[type="datetime-local"].custom-input {
   cursor: pointer;
+}
+input:disabled {
+  background: #e0e0e0;
+  cursor: not-allowed;
 }
 .gap-2 {
   gap: 8px;

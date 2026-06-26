@@ -8,4 +8,12 @@ const {
 
 router.get("/", verifyToken, isAdminOrStaff, statsController.getOverview);
 
+// --- THÊM ROUTE NÀY ---
+router.get(
+  "/inventory-logs",
+  verifyToken,
+  isAdminOrStaff,
+  statsController.getInventoryLogs,
+);
+
 module.exports = router;

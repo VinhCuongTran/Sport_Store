@@ -270,6 +270,35 @@ const Product = {
     const [result] = await db.query("DELETE FROM products WHERE id = ?", [id]);
     return result.affectedRows > 0;
   },
+
+  // Thêm hàm Nhập kho vào cuối file
+  importStock: async (variantId, quantityAdded, importPrice, note) => {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // 1. Cập nhật tồn kho và giá nhập mới nhất vào bảng product_variants
+      await connection.query(
+        "UPDATE product_variants SET stock = stock + ?, import_price = ? WHERE id = ?",
+        [quantityAdded, importPrice, variantId],
+      );
+
+      // 2. Lưu lịch sử vào bảng inventory_logs
+      const logId = generateId();
+      await connection.query(
+        "INSERT INTO inventory_logs (id, variant_id, type, quantity, import_price, note) VALUES (?, ?, 'import', ?, ?, ?)",
+        [logId, variantId, quantityAdded, importPrice, note],
+      );
+
+      await connection.commit();
+      return true;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  },
 };
 
 module.exports = Product;

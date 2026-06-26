@@ -25,4 +25,12 @@ router.put(
 
 router.delete("/:id", verifyToken, isAdminOrStaff, productController.delete);
 
+// Route Nhập hàng cho biến thể
+router.post(
+  "/variants/:id/import",
+  verifyToken,
+  isAdminOrStaff,
+  productController.importStock,
+);
+
 module.exports = router;

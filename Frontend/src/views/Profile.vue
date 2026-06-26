@@ -8,176 +8,156 @@
           <v-card
             class="rounded-xl elevation-2 bg-white border-none overflow-hidden"
           >
-            <v-tabs
-              v-model="activeTab"
-              bg-color="#001a2d"
-              color="#77e51f"
-              align-tabs="center"
-              slider-color="#77e51f"
-              class="text-white"
+            <v-card-title
+              class="text-h5 font-weight-bold pa-6 bg-custom-dark text-white text-center"
             >
-              <v-tab value="info" class="text-none font-weight-bold">
-                <v-icon start>mdi-account-circle</v-icon>Hồ sơ cá nhân
-              </v-tab>
-              <v-tab
-                value="orders"
-                class="text-none font-weight-bold"
-                to="/orders"
-              >
-                <v-icon start>mdi-clipboard-text-outline</v-icon>Đơn hàng của
-                tôi
-              </v-tab>
-            </v-tabs>
+              <v-icon class="mr-2 pb-1">mdi-account-circle</v-icon> HỒ SƠ CÁ
+              NHÂN
+            </v-card-title>
 
             <v-card-text class="pa-8">
-              <v-window v-model="activeTab">
-                <v-window-item value="info">
-                  <div v-if="isLoadingData" class="d-flex justify-center py-10">
-                    <v-progress-circular
-                      indeterminate
-                      color="#001a2d"
-                      size="50"
-                    ></v-progress-circular>
+              <div v-if="isLoadingData" class="d-flex justify-center py-10">
+                <v-progress-circular
+                  indeterminate
+                  color="#001a2d"
+                  size="50"
+                ></v-progress-circular>
+              </div>
+
+              <div v-else-if="userData">
+                <div class="d-flex flex-column align-center mb-10">
+                  <div class="position-relative">
+                    <v-avatar
+                      color="grey-lighten-4"
+                      size="130"
+                      class="border-avatar elevation-1"
+                    >
+                      <v-img
+                        :src="userData.avatar || defaultAvatar"
+                        alt="Avatar"
+                        cover
+                      ></v-img>
+                    </v-avatar>
+
+                    <v-btn
+                      icon="mdi-camera"
+                      size="small"
+                      class="avatar-edit-btn custom-btn"
+                      @click="triggerFileInput"
+                      :loading="isUploading"
+                    ></v-btn>
+
+                    <input
+                      ref="fileInput"
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      class="d-none"
+                      @change="handleAvatarUpload"
+                    />
                   </div>
 
-                  <div v-else-if="userData">
-                    <div class="d-flex flex-column align-center mb-10">
-                      <div class="position-relative">
-                        <v-avatar
-                          color="grey-lighten-4"
-                          size="130"
-                          class="border-avatar elevation-1"
+                  <h2
+                    class="text-h4 font-weight-black mt-4 custom-main-color text-uppercase"
+                  >
+                    {{ userData.name }}
+                  </h2>
+                  <v-chip
+                    color="#001a2d"
+                    variant="flat"
+                    class="mt-2 text-white font-weight-bold text-uppercase"
+                  >
+                    {{ userData.role }}
+                  </v-chip>
+                </div>
+
+                <v-divider class="mb-8"></v-divider>
+
+                <v-row justify="center">
+                  <v-col cols="12" sm="10">
+                    <v-list class="bg-transparent pa-0">
+                      <v-list-item
+                        class="mb-4 rounded-lg border bg-grey-lighten-5"
+                      >
+                        <template v-slot:prepend>
+                          <v-icon color="#001a2d" class="mr-4"
+                            >mdi-email-outline</v-icon
+                          >
+                        </template>
+                        <v-list-item-title class="text-caption text-grey"
+                          >Email tài khoản</v-list-item-title
                         >
-                          <v-img
-                            :src="userData.avatar || defaultAvatar"
-                            alt="Avatar"
-                            cover
-                          ></v-img>
-                        </v-avatar>
+                        <v-list-item-subtitle
+                          class="text-body-1 font-weight-bold text-black mt-1"
+                        >
+                          {{ userData.email }}
+                        </v-list-item-subtitle>
+                      </v-list-item>
 
-                        <v-btn
-                          icon="mdi-camera"
-                          size="small"
-                          class="avatar-edit-btn custom-btn"
-                          @click="triggerFileInput"
-                          :loading="isUploading"
-                        ></v-btn>
-
-                        <input
-                          ref="fileInput"
-                          type="file"
-                          accept="image/png, image/jpeg, image/jpg, image/webp"
-                          class="d-none"
-                          @change="handleAvatarUpload"
-                        />
-                      </div>
-
-                      <h2
-                        class="text-h4 font-weight-black mt-4 custom-main-color text-uppercase"
+                      <v-list-item
+                        class="mb-4 rounded-lg border bg-grey-lighten-5"
                       >
-                        {{ userData.name }}
-                      </h2>
-                      <v-chip
-                        color="#001a2d"
-                        variant="flat"
-                        class="mt-2 text-white font-weight-bold text-uppercase"
-                      >
-                        {{ userData.role }}
-                      </v-chip>
-                    </div>
-
-                    <v-divider class="mb-8"></v-divider>
-
-                    <v-row justify="center">
-                      <v-col cols="12" sm="10">
-                        <v-list class="bg-transparent pa-0">
-                          <v-list-item
-                            class="mb-4 rounded-lg border bg-grey-lighten-5"
+                        <template v-slot:prepend>
+                          <v-icon color="#001a2d" class="mr-4"
+                            >mdi-phone-outline</v-icon
                           >
-                            <template v-slot:prepend>
-                              <v-icon color="#001a2d" class="mr-4"
-                                >mdi-email-outline</v-icon
-                              >
-                            </template>
-                            <v-list-item-title class="text-caption text-grey"
-                              >Email tài khoản</v-list-item-title
-                            >
-                            <v-list-item-subtitle
-                              class="text-body-1 font-weight-bold text-black mt-1"
-                            >
-                              {{ userData.email }}
-                            </v-list-item-subtitle>
-                          </v-list-item>
+                        </template>
+                        <v-list-item-title class="text-caption text-grey"
+                          >Số điện thoại</v-list-item-title
+                        >
+                        <v-list-item-subtitle
+                          class="text-body-1 font-weight-bold text-black mt-1"
+                        >
+                          {{ userData.phone_number || "Chưa cập nhật" }}
+                        </v-list-item-subtitle>
+                      </v-list-item>
 
-                          <v-list-item
-                            class="mb-4 rounded-lg border bg-grey-lighten-5"
+                      <v-list-item class="rounded-lg border bg-grey-lighten-5">
+                        <template v-slot:prepend>
+                          <v-icon color="#001a2d" class="mr-4"
+                            >mdi-gender-male-female</v-icon
                           >
-                            <template v-slot:prepend>
-                              <v-icon color="#001a2d" class="mr-4"
-                                >mdi-phone-outline</v-icon
-                              >
-                            </template>
-                            <v-list-item-title class="text-caption text-grey"
-                              >Số điện thoại</v-list-item-title
-                            >
-                            <v-list-item-subtitle
-                              class="text-body-1 font-weight-bold text-black mt-1"
-                            >
-                              {{ userData.phone_number || "Chưa cập nhật" }}
-                            </v-list-item-subtitle>
-                          </v-list-item>
+                        </template>
+                        <v-list-item-title class="text-caption text-grey"
+                          >Giới tính</v-list-item-title
+                        >
+                        <v-list-item-subtitle
+                          class="text-body-1 font-weight-bold text-black mt-1"
+                        >
+                          {{ getGenderText(userData.gender) }}
+                        </v-list-item-subtitle>
+                      </v-list-item>
+                    </v-list>
+                  </v-col>
+                </v-row>
 
-                          <v-list-item
-                            class="rounded-lg border bg-grey-lighten-5"
-                          >
-                            <template v-slot:prepend>
-                              <v-icon color="#001a2d" class="mr-4"
-                                >mdi-gender-male-female</v-icon
-                              >
-                            </template>
-                            <v-list-item-title class="text-caption text-grey"
-                              >Giới tính</v-list-item-title
-                            >
-                            <v-list-item-subtitle
-                              class="text-body-1 font-weight-bold text-black mt-1"
-                            >
-                              {{ getGenderText(userData.gender) }}
-                            </v-list-item-subtitle>
-                          </v-list-item>
-                        </v-list>
-                      </v-col>
-                    </v-row>
+                <div class="d-flex flex-wrap justify-center gap-4 mt-10">
+                  <v-btn
+                    prepend-icon="mdi-pencil"
+                    class="custom-btn px-8 py-6 rounded-lg font-weight-bold"
+                    @click="openEditDialog"
+                  >
+                    CẬP NHẬT THÔNG TIN
+                  </v-btn>
 
-                    <div class="d-flex flex-wrap justify-center gap-4 mt-10">
-                      <v-btn
-                        prepend-icon="mdi-pencil"
-                        class="custom-btn px-8 py-6 rounded-lg font-weight-bold"
-                        @click="openEditDialog"
-                      >
-                        CẬP NHẬT THÔNG TIN
-                      </v-btn>
+                  <v-btn
+                    prepend-icon="mdi-map-marker-outline"
+                    variant="outlined"
+                    class="custom-btn-outline px-8 py-6 rounded-lg font-weight-bold"
+                    @click="dialogAddresses = true"
+                  >
+                    SỔ ĐỊA CHỈ
+                  </v-btn>
 
-                      <v-btn
-                        prepend-icon="mdi-map-marker-outline"
-                        variant="outlined"
-                        class="custom-btn-outline px-8 py-6 rounded-lg font-weight-bold"
-                        @click="dialogAddresses = true"
-                      >
-                        SỔ ĐỊA CHỈ
-                      </v-btn>
-
-                      <v-btn
-                        prepend-icon="mdi-lock-reset"
-                        variant="outlined"
-                        class="custom-btn-outline-red px-8 py-6 rounded-lg font-weight-bold"
-                        @click="dialogPassword = true"
-                      >
-                        ĐỔI MẬT KHẨU
-                      </v-btn>
-                    </div>
-                  </div>
-                </v-window-item>
-              </v-window>
+                  <v-btn
+                    prepend-icon="mdi-lock-reset"
+                    variant="outlined"
+                    class="custom-btn-outline-red px-8 py-6 rounded-lg font-weight-bold"
+                    @click="dialogPassword = true"
+                  >
+                    ĐỔI MẬT KHẨU
+                  </v-btn>
+                </div>
+              </div>
             </v-card-text>
           </v-card>
         </v-col>
@@ -304,7 +284,7 @@ import AddressManager from "@/components/AddressManager.vue";
 import Loading from "@/components/Loading.vue";
 
 const router = useRouter();
-const activeTab = ref("info");
+// Đã xóa biến activeTab
 const isLoadingData = ref(true);
 const isUploading = ref(false);
 const isSaving = ref(false);

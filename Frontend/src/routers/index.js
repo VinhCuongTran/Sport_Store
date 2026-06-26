@@ -32,18 +32,29 @@ const routes = [
         path: "users",
         name: "admin-user",
         component: () => import("../views/Admin/AdminUser.vue"),
-        meta: { requiresSuperAdmin: true }, // Chỉ Admin mới vào được
+        meta: { requiresSuperAdmin: true },
       },
       {
         path: "products",
         name: "admin-product",
         component: () => import("../views/Admin/AdminProduct.vue"),
       },
+      // --- THÊM ROUTE CHO LỊCH SỬ KHO TẠI ĐÂY ---
+      {
+        path: "inventory-logs",
+        name: "admin-inventory-log",
+        component: () => import("../views/Admin/AdminInventoryLog.vue"),
+      },
+      // ------------------------------------------
+      {
+        path: "orders",
+        name: "admin-order",
+        component: () => import("../views/Admin/AdminOrder.vue"),
+      },
       {
         path: "vouchers",
         name: "admin-voucher",
         component: () => import("../views/Admin/AdminVoucher.vue"),
-        meta: { requiresSuperAdmin: true }, // Chỉ Admin mới vào được
       },
       {
         path: "reviews",
@@ -51,9 +62,9 @@ const routes = [
         component: () => import("../views/Admin/AdminReview.vue"),
       },
       {
-        path: "orders",
-        name: "admin-order",
-        component: () => import("../views/Admin/AdminOrder.vue"),
+        path: "low-stock",
+        name: "admin-low-stock",
+        component: () => import("../views/Admin/AdminLowStock.vue"),
       },
     ],
   },
@@ -65,6 +76,21 @@ const routes = [
         path: "",
         name: "home",
         component: () => import("../views/Home.vue"),
+      },
+      {
+        path: "about-us",
+        name: "about",
+        component: () => import("../views/AboutUs.vue"),
+      },
+      {
+        path: "All-Brands",
+        name: "All-Brands",
+        component: () => import("../views/AllBrands.vue"),
+      },
+      {
+        path: "New-Arrivals",
+        name: "New-Arrivals",
+        component: () => import("../views/NewArrivals.vue"),
       },
       {
         path: "products",
@@ -82,34 +108,22 @@ const routes = [
         component: () => import("../views/Cart.vue"),
       },
       {
-        path: "profile",
-        name: "profile",
-        component: () => import("../views/Profile.vue"),
-      },
-      {
         path: "checkout",
         name: "checkout",
         component: () => import("../views/Checkout.vue"),
+        meta: { requiresAuth: true },
       },
       {
         path: "orders",
-        name: "orders",
+        name: "order",
         component: () => import("../views/Order.vue"),
+        meta: { requiresAuth: true },
       },
       {
-        path: "About-Us",
-        name: "About-Us",
-        component: () => import("../views/AboutUs.vue"),
-      },
-      {
-        path: "All-Brands",
-        name: "All-Brands",
-        component: () => import("../views/AllBrands.vue"),
-      },
-      {
-        path: "New-Arrivals",
-        name: "New-Arrivals",
-        component: () => import("../views/NewArrivals.vue"),
+        path: "profile",
+        name: "profile",
+        component: () => import("../views/Profile.vue"),
+        meta: { requiresAuth: true },
       },
       {
         path: "/:pathMatch(.*)*",
@@ -149,20 +163,19 @@ router.beforeEach((to, from) => {
 
   if (to.matched.some((record) => record.meta.requiresAdmin)) {
     if (!AuthService.isAdmin()) {
-      return { name: "login" };
+      return { name: "home" };
     }
-  }
-  if (to.matched.some((record) => record.meta.requiresSuperAdmin)) {
-    if (!AuthService.isSuperAdmin()) {
+    if (to.meta.requiresSuperAdmin && !AuthService.isSuperAdmin()) {
       return { name: "admin-order" };
     }
   }
-  if (to.matched.some((record) => record.meta.requiresAuth)) {
-    if (!isAuthenticated) {
-      return { name: "login" };
-    }
+
+  if (
+    to.matched.some((record) => record.meta.requiresAuth) &&
+    !isAuthenticated
+  ) {
+    return { name: "login", query: { redirect: to.fullPath } };
   }
-  return true;
 });
 
 export default router;
