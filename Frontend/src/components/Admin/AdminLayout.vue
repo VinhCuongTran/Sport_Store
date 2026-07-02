@@ -151,6 +151,15 @@
         ></v-list-item>
 
         <v-list-item
+          prepend-icon="mdi-clipboard-check-outline"
+          title="Tạo Phiếu Kiểm Kho"
+          :to="{ name: 'admin-stock-take' }"
+          exact
+          color="blue-lighten-1"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+        <v-list-item
           prepend-icon="mdi-history"
           title="Lịch sử Kho"
           :to="{ name: 'admin-inventory-log' }"

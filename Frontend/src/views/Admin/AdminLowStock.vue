@@ -35,6 +35,18 @@
         ></v-text-field>
 
         <v-btn
+          color="green-darken-3"
+          prepend-icon="mdi-file-excel"
+          rounded="lg"
+          variant="elevated"
+          class="text-capitalize mr-3"
+          @click="exportToExcel"
+          :disabled="lowStockItems.length === 0"
+        >
+          Xuất báo cáo
+        </v-btn>
+
+        <v-btn
           color="red-darken-4"
           prepend-icon="mdi-refresh"
           rounded="lg"
@@ -100,132 +112,23 @@
             {{ item.stock }}
           </v-chip>
         </template>
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            color="green-darken-2"
-            size="small"
-            variant="tonal"
-            rounded="lg"
-            prepend-icon="mdi-package-down"
-            @click="openImportDialog(item)"
-          >
-            Nhập kho
-          </v-btn>
-        </template>
       </v-data-table>
     </v-card>
-
-    <v-dialog v-model="dialogImportStock" max-width="450" persistent>
-      <v-card rounded="xl">
-        <v-card-title
-          class="text-h6 font-weight-bold bg-green-darken-3 text-white pa-4"
-        >
-          <v-icon class="mr-2">mdi-package-down</v-icon>
-          Phiếu Nhập Kho Mới
-        </v-card-title>
-
-        <v-card-text class="pt-6">
-          <div class="mb-2">
-            <span class="font-weight-bold">Sản phẩm:</span>
-            <span class="text-indigo-darken-4 ml-1">{{
-              selectedVariant?.product_name
-            }}</span>
-          </div>
-          <div class="mb-4">
-            <span class="font-weight-bold">Phân loại:</span>
-            <v-chip size="small" class="ml-2 mr-1">{{
-              selectedVariant?.color || "N/A"
-            }}</v-chip>
-            <v-chip size="small">{{ selectedVariant?.size || "N/A" }}</v-chip>
-          </div>
-          <div
-            class="mb-5 bg-grey-lighten-4 pa-3 rounded-lg border d-flex align-center justify-space-between"
-          >
-            <span>Tồn kho hiện tại:</span>
-            <strong
-              :class="
-                selectedVariant?.stock === 0
-                  ? 'text-red'
-                  : 'text-amber-darken-4'
-              "
-              class="text-h5"
-            >
-              {{ selectedVariant?.stock }}
-            </strong>
-          </div>
-
-          <v-text-field
-            v-model.number="stockToAdd"
-            label="Số lượng nhập thêm"
-            type="number"
-            min="1"
-            variant="outlined"
-            density="comfortable"
-            color="green-darken-3"
-            prepend-inner-icon="mdi-counter"
-            class="mb-2"
-          ></v-text-field>
-          <v-text-field
-            v-model.number="importPrice"
-            label="Giá nhập (VNĐ / 1 sản phẩm)"
-            type="number"
-            min="0"
-            variant="outlined"
-            density="comfortable"
-            color="green-darken-3"
-            prepend-inner-icon="mdi-currency-usd"
-            hint="Dùng để thống kê lợi nhuận"
-            persistent-hint
-          ></v-text-field>
-        </v-card-text>
-
-        <v-divider></v-divider>
-
-        <v-card-actions class="pa-4 bg-grey-lighten-5">
-          <v-spacer></v-spacer>
-          <v-btn
-            variant="outlined"
-            color="grey-darken-2"
-            class="text-capitalize px-4"
-            @click="dialogImportStock = false"
-            rounded="lg"
-            >Hủy bỏ</v-btn
-          >
-          <v-btn
-            color="green-darken-3"
-            variant="elevated"
-            class="text-capitalize px-6"
-            :loading="isUpdating"
-            @click="submitImportStock"
-            rounded="lg"
-            >Lưu Phiếu Nhập</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { ref, onMounted } from "vue";
 import { useToast } from "vue-toastification";
 import api from "@/services/api.service";
+import * as XLSX from "xlsx"; // Import thư viện xuất Excel
 
 const toast = useToast();
-const route = useRoute();
-const router = useRouter();
-
 const isLoading = ref(false);
 const lowStockItems = ref([]);
 const searchKeyword = ref("");
 
-const dialogImportStock = ref(false);
-const isUpdating = ref(false);
-const selectedVariant = ref(null);
-const stockToAdd = ref(1);
-const importPrice = ref(0);
-
+// Đã gỡ bỏ cột "Thao tác"
 const headers = [
   {
     title: "STT",
@@ -246,14 +149,7 @@ const headers = [
     key: "stock",
     align: "center",
     sortable: true,
-    width: "120px",
-  },
-  {
-    title: "Thao tác",
-    key: "actions",
-    sortable: false,
-    align: "center",
-    width: "160px",
+    width: "150px",
   },
 ];
 
@@ -262,26 +158,6 @@ const fetchLowStock = async () => {
   try {
     const response = await api.get("/stats");
     lowStockItems.value = response.data.lowStockProducts || [];
-
-    // --- LOGIC TỰ ĐỘNG MỞ FORM NẾU CÓ QUERY PARAM ---
-    if (route.query.open_import) {
-      const targetId = String(route.query.open_import);
-
-      // Tìm sản phẩm có id, product_id hoặc variant_id trùng khớp
-      const targetItem = lowStockItems.value.find(
-        (item) =>
-          String(item.product_id) === targetId ||
-          String(item.variant_id) === targetId ||
-          String(item.id) === targetId,
-      );
-
-      if (targetItem) {
-        openImportDialog(targetItem);
-      }
-
-      // Xóa query trên URL để khi người dùng F5 không bị mở lại form cũ
-      router.replace({ query: {} });
-    }
   } catch (error) {
     toast.error("Không thể tải dữ liệu tồn kho.");
   } finally {
@@ -289,62 +165,48 @@ const fetchLowStock = async () => {
   }
 };
 
-const openImportDialog = (item) => {
-  selectedVariant.value = item.raw || item;
-  stockToAdd.value = 1;
-  importPrice.value = 0;
-  dialogImportStock.value = true;
-};
-
-const submitImportStock = async () => {
-  if (stockToAdd.value < 1) return toast.error("Số lượng nhập phải lớn hơn 0");
-  if (importPrice.value < 0) return toast.error("Giá nhập không được để số âm");
-
-  isUpdating.value = true;
-  try {
-    const variantId =
-      selectedVariant.value.variant_id || selectedVariant.value.id;
-    await api.post(`/products/variants/${variantId}/import`, {
-      quantity_added: stockToAdd.value,
-      import_price: importPrice.value,
-    });
-
-    const newStock = selectedVariant.value.stock + stockToAdd.value;
-    selectedVariant.value.stock = newStock;
-
-    if (newStock > 20) {
-      lowStockItems.value = lowStockItems.value.filter(
-        (item) => (item.variant_id || item.id) !== variantId,
-      );
-    }
-
-    toast.success("Đã lưu phiếu nhập kho thành công!");
-    dialogImportStock.value = false;
-  } catch (error) {
-    toast.error("Nhập kho thất bại. Vui lòng thử lại.");
-  } finally {
-    isUpdating.value = false;
+// Hàm xử lý xuất file Excel
+const exportToExcel = () => {
+  if (lowStockItems.value.length === 0) {
+    toast.warning("Không có dữ liệu để xuất!");
+    return;
   }
-};
 
-// Theo dõi thay đổi của route để tự mở nếu người dùng đang ở sẵn trang admin-low-stock mà bấm vào thông báo khác
-watch(
-  () => route.query.open_import,
-  (newId) => {
-    if (newId && lowStockItems.value.length > 0) {
-      const targetItem = lowStockItems.value.find(
-        (item) =>
-          String(item.product_id) === String(newId) ||
-          String(item.variant_id) === String(newId) ||
-          String(item.id) === String(newId),
-      );
-      if (targetItem) {
-        openImportDialog(targetItem);
-        router.replace({ query: {} });
-      }
-    }
-  },
-);
+  // 1. Chuyển đổi dữ liệu thô thành định dạng cột rõ ràng cho Excel
+  const excelData = lowStockItems.value.map((item, index) => ({
+    STT: index + 1,
+    "Tên Sản phẩm": item.product_name,
+    "Màu sắc": item.color || "N/A",
+    "Kích cỡ": item.size || "N/A",
+    "Tồn kho hiện tại": item.stock,
+  }));
+
+  // 2. Tạo một Worksheet mới từ dữ liệu
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+  // 3. Tùy chỉnh độ rộng của các cột cho đẹp mắt
+  const colWidths = [
+    { wch: 6 }, // STT
+    { wch: 45 }, // Tên Sản phẩm
+    { wch: 15 }, // Màu sắc
+    { wch: 10 }, // Kích cỡ
+    { wch: 18 }, // Tồn kho
+  ];
+  worksheet["!cols"] = colWidths;
+
+  // 4. Khởi tạo một Workbook (File Excel) và gắn sheet vào
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sản phẩm sắp hết");
+
+  // 5. Đặt tên file kèm theo ngày tháng hiện tại
+  const today = new Date();
+  const dateString = `${today.getDate()}_${today.getMonth() + 1}_${today.getFullYear()}`;
+  const fileName = `Bao_Cao_Sap_Het_Hang_${dateString}.xlsx`;
+
+  // 6. Kích hoạt tải xuống
+  XLSX.writeFile(workbook, fileName);
+  toast.success("Tải báo cáo Excel thành công!");
+};
 
 onMounted(() => fetchLowStock());
 </script>

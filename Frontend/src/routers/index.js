@@ -71,6 +71,11 @@ const routes = [
         name: "admin-low-stock",
         component: () => import("../views/Admin/AdminLowStock.vue"),
       },
+      {
+        path: "stock-take",
+        name: "admin-stock-take",
+        component: () => import("../views/Admin/AdminStockTake.vue"),
+      },
     ],
   },
   {

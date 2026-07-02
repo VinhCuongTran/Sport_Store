@@ -290,6 +290,27 @@ const OrderController = {
       staff_id,
     );
 
+    // Thêm đoạn này vào phần xử lý cập nhật trạng thái trong order.controller.js
+    if (status === "completed" && oldStatus !== "completed") {
+      try {
+        const [orderItems] = await db.query(
+          "SELECT variant_id, quantity FROM order_items WHERE order_id = ?",
+          [orderId],
+        );
+        for (const item of orderItems) {
+          if (item.variant_id) {
+            // Hàng đã giao xong, xóa khỏi danh sách tạm giữ
+            await db.query(
+              "UPDATE product_variants SET reserved_stock = reserved_stock - ? WHERE id = ?",
+              [item.quantity, item.variant_id],
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi trừ reserved_stock:", error);
+      }
+    }
+
     if (!isUpdated)
       throw new ApiError(404, "Không tìm thấy đơn hàng để cập nhật");
 

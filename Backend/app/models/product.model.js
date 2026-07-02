@@ -314,6 +314,162 @@ const Product = {
       connection.release();
     }
   },
+  // Lấy danh sách phiếu nhập
+  getAllStockTickets: async () => {
+    const [rows] = await db.query(`
+      SELECT st.*, u.name as staff_name 
+      FROM stock_tickets st
+      LEFT JOIN users u ON st.staff_id = u.id
+      ORDER BY st.created_at DESC
+    `);
+    return rows;
+  },
+
+  // Xem chi tiết phiếu nhập
+  getStockTicketById: async (id) => {
+    const [tickets] = await db.query(
+      `
+      SELECT st.*, u.name as staff_name 
+      FROM stock_tickets st
+      LEFT JOIN users u ON st.staff_id = u.id
+      WHERE st.id = ?
+    `,
+      [id],
+    );
+
+    if (tickets.length === 0) return null;
+
+    // Lấy chi tiết sản phẩm từ bảng inventory_logs dựa vào reference_id
+    const [items] = await db.query(
+      `
+      SELECT il.quantity, il.import_price, pv.color, pv.size, p.name as product_name
+      FROM inventory_logs il
+      JOIN product_variants pv ON il.variant_id = pv.id
+      JOIN products p ON pv.product_id = p.id
+      WHERE il.reference_id = ?
+    `,
+      [id],
+    );
+
+    return { ...tickets[0], items };
+  },
+
+  // Tạo phiếu nhập mới
+  createStockTicket: async (staffId, ticketData) => {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const ticketId = generateId();
+      let totalItems = 0;
+      let totalAmount = 0;
+
+      for (const item of ticketData.items) {
+        totalItems += item.quantity_added;
+        totalAmount += item.quantity_added * (item.import_price || 0);
+      }
+
+      // 1. Tạo phiếu mẹ
+      await connection.query(
+        `INSERT INTO stock_tickets (id, staff_id, supplier, note, total_items, total_amount) 
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          ticketId,
+          staffId,
+          ticketData.supplier || null,
+          ticketData.note || null,
+          totalItems,
+          totalAmount,
+        ],
+      );
+
+      // 2. Chạy vòng lặp xử lý từng dòng sản phẩm
+      for (const item of ticketData.items) {
+        if (item.quantity_added > 0) {
+          let currentProductId = item.product_id;
+
+          // TRƯỜNG HỢP A: SẢN PHẨM HOÀN TOÀN MỚI
+          if (!currentProductId) {
+            currentProductId = generateId();
+            // Đặt status là 'hidden' để khách hàng chưa thấy trang này cho đến khi bạn up ảnh và mô tả
+            await connection.query(
+              "INSERT INTO products (id, name, category_id, status) VALUES (?, ?, ?, 'hidden')",
+              [currentProductId, item.product_name, item.category_id],
+            );
+          }
+
+          const cleanColor = item.color
+            ? item.color.trim().toUpperCase()
+            : null;
+          const cleanSize = item.size ? item.size.trim().toUpperCase() : null;
+
+          // KIỂM TRA: PHÂN LOẠI NÀY ĐÃ TỒN TẠI CHƯA?
+          const [existingVariants] = await connection.query(
+            "SELECT id FROM product_variants WHERE product_id = ? AND IFNULL(color,'') = IFNULL(?,'') AND IFNULL(size,'') = IFNULL(?,'')",
+            [currentProductId, cleanColor, cleanSize],
+          );
+
+          let currentVariantId;
+
+          // TRƯỜNG HỢP B: PHÂN LOẠI ĐÃ CÓ -> CẬP NHẬT KHO
+          if (existingVariants.length > 0) {
+            currentVariantId = existingVariants[0].id;
+            await connection.query(
+              "UPDATE product_variants SET stock = stock + ?, import_price = ? WHERE id = ?",
+              [item.quantity_added, item.import_price || 0, currentVariantId],
+            );
+          }
+          // TRƯỜNG HỢP C: PHÂN LOẠI CHƯA CÓ -> TẠO PHÂN LOẠI MỚI
+          else {
+            currentVariantId = generateId();
+            await connection.query(
+              "INSERT INTO product_variants (id, product_id, size, color, price, stock, import_price) VALUES (?, ?, ?, ?, 0, ?, ?)",
+              [
+                currentVariantId,
+                currentProductId,
+                cleanSize,
+                cleanColor,
+                item.quantity_added,
+                item.import_price || 0,
+              ],
+            );
+          }
+
+          // GHI LỊCH SỬ KHO (inventory_logs)
+          const logId = generateId();
+          await connection.query(
+            "INSERT INTO inventory_logs (id, variant_id, type, quantity, import_price, note, reference_id) VALUES (?, ?, 'import', ?, ?, ?, ?)",
+            [
+              logId,
+              currentVariantId,
+              item.quantity_added,
+              item.import_price || 0,
+              ticketData.note || "Nhập theo phiếu",
+              ticketId,
+            ],
+          );
+        }
+      }
+
+      await connection.commit();
+      return ticketId;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  },
+  // Lấy danh sách tất cả các biến thể (size, màu) để đưa lên ô tìm kiếm kiểm kho
+  getAllVariants: async () => {
+    const [rows] = await db.query(`
+      SELECT pv.id as variant_id, pv.color, pv.size, pv.import_price, p.name as product_name
+      FROM product_variants pv
+      JOIN products p ON pv.product_id = p.id
+      ORDER BY p.name ASC
+    `);
+    return rows;
+  },
 };
 
 module.exports = Product;

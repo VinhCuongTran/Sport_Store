@@ -27,8 +27,8 @@ const Order = {
           orderData.phone_number,
           orderData.shipping_address,
           orderData.payment_method || "Cash",
-          orderData.payment_status || "unpaid" // Nhận 'paid' nếu là Chuyển khoản
-        ]
+          orderData.payment_status || "unpaid", // Nhận 'paid' nếu là Chuyển khoản
+        ],
       );
 
       if (items && items.length > 0) {
@@ -49,8 +49,10 @@ const Order = {
         for (const item of items) {
           if (item.variant_id) {
             await connection.query(
-              `UPDATE product_variants SET stock = stock - ? WHERE id = ? AND stock >= ?`,
-              [item.quantity, item.variant_id, item.quantity],
+              `UPDATE product_variants 
+               SET stock = stock - ?, 
+               reserved_stock = reserved_stock + ?`,
+              [item.quantity, item.quantity],
             );
           }
         }
@@ -189,8 +191,11 @@ const Order = {
       for (const item of items) {
         if (item.variant_id) {
           await connection.query(
-            `UPDATE product_variants SET stock = stock + ? WHERE id = ?`,
-            [item.quantity, item.variant_id],
+            `UPDATE product_variants 
+       SET stock = stock + ?, 
+           reserved_stock = reserved_stock - ? 
+       WHERE id = ?`,
+            [item.quantity, item.quantity, item.variant_id],
           );
         }
       }

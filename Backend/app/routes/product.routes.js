@@ -6,8 +6,45 @@ const {
   verifyToken,
   isAdminOrStaff,
 } = require("../middlewares/auth.middleware");
+
+// ==========================================
+// ĐẶT CÁC ROUTE CỐ ĐỊNH (STATIC) LÊN TRÊN CÙNG
+// ==========================================
+router.get(
+  "/all-variants",
+  verifyToken,
+  isAdminOrStaff,
+  productController.getAllVariants,
+);
+router.get(
+  "/stock-tickets",
+  verifyToken,
+  isAdminOrStaff,
+  productController.getAllStockTickets,
+);
+
+router.post(
+  "/stock-tickets",
+  verifyToken,
+  isAdminOrStaff,
+  productController.createStockTicket,
+);
+
+router.get(
+  "/stock-tickets/:id",
+  verifyToken,
+  isAdminOrStaff,
+  productController.getStockTicketById,
+);
+
+// ==========================================
+// CÁC ROUTE ĐỘNG VÀ CŨ CỦA BẠN BÊN DƯỚI[cite: 12]
+// ==========================================
 router.get("/", productController.findAll);
+
+// Bất kỳ cái gì có dạng tham số (/:id) phải nằm dưới cùng
 router.get("/:id", productController.findOne);
+
 router.post(
   "/",
   verifyToken,
@@ -15,6 +52,7 @@ router.post(
   upload.array("images", 20),
   productController.create,
 );
+
 router.put(
   "/:id",
   verifyToken,

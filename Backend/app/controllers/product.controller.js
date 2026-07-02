@@ -240,6 +240,37 @@ const Product = {
 
     res.json({ message: "Lưu phiếu nhập kho thành công" });
   }),
+  
+
+  getAllVariants: asyncHandler(async (req, res) => {
+    const data = await ProductModel.getAllVariants();
+    res.json(data);
+  }),
+
+  getAllStockTickets: asyncHandler(async (req, res) => {
+    const data = await ProductModel.getAllStockTickets();
+    res.json(data);
+  }),
+
+  getStockTicketById: asyncHandler(async (req, res) => {
+    const ticket = await ProductModel.getStockTicketById(req.params.id);
+    if (!ticket) {
+      throw new ApiError(404, "Không tìm thấy phiếu kiểm kho");
+    }
+    res.json(ticket);
+  }),
+
+  createStockTicket: asyncHandler(async (req, res) => {
+    const staffId = req.user.id; 
+    const ticketData = req.body;
+
+    if (!ticketData.items || ticketData.items.length === 0) {
+      throw new ApiError(400, "Phiếu nhập không có sản phẩm nào");
+    }
+
+    const ticketId = await ProductModel.createStockTicket(staffId, ticketData);
+    res.status(201).json({ message: "Lưu phiếu kiểm kho thành công", ticketId });
+  })
 };
 
 module.exports = Product;
