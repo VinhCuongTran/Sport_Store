@@ -7,7 +7,7 @@ const {
 } = require("../middlewares/auth.middleware");
 
 router.get("/", verifyToken, isAdminOrStaff, statsController.getOverview);
-
+router.get("/filtered", verifyToken, isAdminOrStaff, statsController.getFilteredStats);
 // --- THÊM ROUTE NÀY ---
 router.get(
   "/inventory-logs",

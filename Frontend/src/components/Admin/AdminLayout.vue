@@ -37,6 +37,17 @@
         ></v-list-item>
 
         <v-list-item
+          v-if="isSuperAdmin"
+          prepend-icon="mdi-cash-multiple"
+          title="Dòng tiền"
+          :to="{ name: 'admin-transaction' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-list-item
           prepend-icon="mdi-shape-outline"
           title="Loại hàng"
           :to="{ name: 'admin-category' }"

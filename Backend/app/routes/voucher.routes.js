@@ -7,6 +7,8 @@ const {
 } = require("../middlewares/auth.middleware");
 
 router.get("/", voucherController.findAll);
+// Đã xóa 2 dấu backtick bị dư ở cuối dòng này
+router.get("/:id/usage", voucherController.getUsage);
 router.get("/:id", voucherController.findOne);
 router.post("/", verifyToken, isAdminOrStaff, voucherController.create);
 router.put("/:id", verifyToken, isAdminOrStaff, voucherController.update);

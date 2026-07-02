@@ -14,6 +14,11 @@ const routes = [
         meta: { requiresSuperAdmin: true },
       },
       {
+        path: "transactions",
+        name: "admin-transaction",
+        component: () => import("../views/Admin/AdminTransaction.vue"),
+      },
+      {
         path: "categories",
         name: "admin-category",
         component: () => import("../views/Admin/AdminCategory.vue"),

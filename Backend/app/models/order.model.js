@@ -9,9 +9,10 @@ const Order = {
 
       const orderId = generateId();
       await connection.query(
+        // Đã thêm payment_status vào cột và tham số VALUES
         `INSERT INTO orders 
-        (id, user_id, voucher_id, shipping_voucher_id, subtotal, shipping_fee, discount_amount, shipping_discount, total_price, receiver_name, phone_number, shipping_address, payment_method, status) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+        (id, user_id, voucher_id, shipping_voucher_id, subtotal, shipping_fee, discount_amount, shipping_discount, total_price, receiver_name, phone_number, shipping_address, payment_method, status, payment_status) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
         [
           orderId,
           orderData.user_id,
@@ -26,7 +27,8 @@ const Order = {
           orderData.phone_number,
           orderData.shipping_address,
           orderData.payment_method || "Cash",
-        ],
+          orderData.payment_status || "unpaid" // Nhận 'paid' nếu là Chuyển khoản
+        ]
       );
 
       if (items && items.length > 0) {

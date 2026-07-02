@@ -28,7 +28,6 @@ const OrderController = {
       is_from_cart,
     } = req.body;
 
-    // Lấy phí vận chuyển từ FE, mặc định là 0 nếu không có
     const shipping_fee =
       req.body.shipping_fee !== undefined ? Number(req.body.shipping_fee) : 0;
 
@@ -46,7 +45,6 @@ const OrderController = {
       );
     }
 
-    // Kiểm tra trùng lặp Voucher Sản phẩm
     if (voucher_id) {
       const [usedVoucher] = await db.query(
         "SELECT id FROM orders WHERE user_id = ? AND voucher_id = ? LIMIT 1",
@@ -60,7 +58,6 @@ const OrderController = {
       }
     }
 
-    // Kiểm tra trùng lặp Voucher Vận chuyển
     if (shipping_voucher_id) {
       const [usedShippingVoucher] = await db.query(
         "SELECT id FROM orders WHERE user_id = ? AND shipping_voucher_id = ? LIMIT 1",
@@ -74,7 +71,6 @@ const OrderController = {
       }
     }
 
-    // Kiểm tra kho hàng
     for (const item of items) {
       const [variantInfo] = await db.query(
         "SELECT stock FROM product_variants WHERE id = ?",
@@ -94,17 +90,20 @@ const OrderController = {
       }
     }
 
-    // Tính toán lại tổng tiền để đảm bảo tính chính xác (Ép kiểu Number)
     const final_subtotal = Number(subtotal) || 0;
     const final_discount = Number(discount_amount) || 0;
     const final_shipping_discount = Number(shipping_discount) || 0;
 
-    // Tổng tiền = Giá gốc + Phí ship - Giảm giá SP - Giảm giá ship
     let total_price =
       final_subtotal + shipping_fee - final_discount - final_shipping_discount;
-    if (total_price < 0) total_price = 0; // Đảm bảo tổng tiền không bị âm
+    if (total_price < 0) total_price = 0;
 
-    // Chỉ khai báo orderData MỘT LẦN duy nhất
+    // --- LOGIC MỚI: XÁC ĐỊNH ONLINE PAYMENT ---
+    const isOnlinePayment = ["BankTransfer", "VNPay", "Momo"].includes(
+      payment_method,
+    );
+    const initialPaymentStatus = isOnlinePayment ? "paid" : "unpaid";
+
     const orderData = {
       user_id,
       voucher_id,
@@ -118,18 +117,37 @@ const OrderController = {
       phone_number,
       shipping_address,
       payment_method,
+      payment_status: initialPaymentStatus, // Ép kiểu paid nếu chuyển khoản
     };
 
-    // Chỉ tạo orderId MỘT LẦN duy nhất
     const orderId = await OrderModel.create(orderData, items);
+
+    // --- TẠO DÒNG THU TIỀN NGAY LẬP TỨC NẾU LÀ CHUYỂN KHOẢN ---
+    if (isOnlinePayment) {
+      try {
+        const transId = generateId();
+        await db.query(
+          `INSERT INTO transactions (id, order_id, amount, transaction_type, payment_method, status, note) 
+           VALUES (?, ?, ?, 'payment', ?, 'success', ?)`,
+          [
+            transId,
+            orderId,
+            total_price,
+            payment_method,
+            `Thu tiền đơn hàng #${orderId} (Khách đã chuyển khoản)`,
+          ],
+        );
+      } catch (err) {
+        console.error("Lỗi khi tạo dòng tiền thanh toán online:", err);
+      }
+    }
 
     if (is_from_cart) {
       const cartId = await CartModel.getCartIdByUserId(user_id);
       await CartModel.clearCart(cartId);
     }
 
-    // --- BẮT ĐẦU: LẤY THÔNG TIN CHỦ TÀI KHOẢN ---
-    let buyerName = receiver_name; // Fallback mặc định là tên người nhận hộ
+    let buyerName = receiver_name;
     let buyerEmail = null;
     try {
       const [userData] = await db.query(
@@ -144,19 +162,15 @@ const OrderController = {
       console.error("Lỗi lấy thông tin tài khoản người mua:", err);
     }
 
-    // --- BẮT ĐẦU: GỬI EMAIL XÁC NHẬN CHO KHÁCH HÀNG (CHẠY NGẦM) ---
     if (buyerEmail) {
       sendOrderConfirmation(buyerEmail, orderId, orderData, buyerName);
     }
 
-    // --- XỬ LÝ GỬI THÔNG BÁO CHO ADMIN ---
     try {
       const [admins] = await db.query(
         "SELECT id FROM users WHERE role IN ('admin', 'staff')",
       );
-
       if (admins && admins.length > 0) {
-        // 1. GỬI THÔNG BÁO: ĐƠN HÀNG MỚI (Đã đổi sang buyerName của tài khoản đặt)
         const orderType = "new_order";
         const orderTitle = "Đơn hàng mới";
         const orderMessage = `Khách hàng ${buyerName} vừa đặt đơn hàng mới #${orderId}.`;
@@ -182,24 +196,17 @@ const OrderController = {
           }
         }
 
-        // 2. GỬI THÔNG BÁO: CẢNH BÁO SẮP HẾT HÀNG
-        const LOW_STOCK_THRESHOLD = 20; // Ngưỡng cảnh báo
-
+        const LOW_STOCK_THRESHOLD = 20;
         for (const item of items) {
-          // Dùng JOIN để lấy luôn số lượng tồn kho VÀ tên sản phẩm từ CSDL
           const [variantData] = await db.query(
-            `SELECT pv.stock, p.name AS product_name 
-             FROM product_variants pv 
-             JOIN products p ON pv.product_id = p.id 
-             WHERE pv.id = ?`,
+            `SELECT pv.stock, p.name AS product_name FROM product_variants pv JOIN products p ON pv.product_id = p.id WHERE pv.id = ?`,
             [item.variant_id],
           );
 
           if (variantData && variantData.length > 0) {
             const currentStock = variantData[0].stock;
-            const productName = variantData[0].product_name; // Lấy tên từ CSDL
+            const productName = variantData[0].product_name;
 
-            // Nếu tồn kho rơi xuống mức cảnh báo
             if (currentStock <= LOW_STOCK_THRESHOLD) {
               const lowStockTitle = "⚠️ Cảnh báo sắp hết hàng";
               const lowStockMessage = `Sản phẩm "${productName}" hiện chỉ còn ${currentStock} sản phẩm trong kho!`;
@@ -212,7 +219,6 @@ const OrderController = {
                   lowStockMessage,
                   item.product_id,
                 );
-
                 if (typeof sendRealTimeNotification === "function") {
                   sendRealTimeNotification(admin.id, {
                     id: insertId,
@@ -233,10 +239,7 @@ const OrderController = {
       console.error("Lỗi khi gửi thông báo cho admin:", error);
     }
 
-    res.status(201).json({
-      message: "Đặt hàng thành công",
-      order_id: orderId,
-    });
+    res.status(201).json({ message: "Đặt hàng thành công", order_id: orderId });
   }),
 
   getAllOrders: asyncHandler(async (req, res) => {
@@ -253,9 +256,7 @@ const OrderController = {
   getOrderById: asyncHandler(async (req, res) => {
     const orderId = req.params.id;
     const order = await OrderModel.getById(orderId);
-    if (!order) {
-      throw new ApiError(404, "Không tìm thấy đơn hàng");
-    }
+    if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
     res.json(order);
   }),
 
@@ -270,18 +271,17 @@ const OrderController = {
         "Vui lòng cung cấp trạng thái đơn hàng và trạng thái thanh toán",
       );
     }
+
+    // Nếu đơn COD được giao thành công -> Tự đổi thành Đã thanh toán
     if (status === "completed") {
       payment_status = "paid";
     }
 
-    // Lấy thông tin đơn hàng
     const order = await OrderModel.getById(orderId);
-    if (!order) {
-      throw new ApiError(404, "Không tìm thấy đơn hàng");
-    }
+    if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
 
-    // Trạng thái cũ của đơn hàng để so sánh
     const oldStatus = order.status;
+    const oldPaymentStatus = order.payment_status;
 
     const isUpdated = await OrderModel.updateStatus(
       orderId,
@@ -290,18 +290,69 @@ const OrderController = {
       staff_id,
     );
 
-    if (!isUpdated) {
+    if (!isUpdated)
       throw new ApiError(404, "Không tìm thấy đơn hàng để cập nhật");
+
+    // --- XỬ LÝ DÒNG TIỀN THEO NGHIỆP VỤ ---
+    try {
+      // 1. TẠO DÒNG THU TIỀN KHI ĐƠN COD HOÀN THÀNH
+      // Vì online payment đã được thu ngay lúc tạo đơn rồi
+      const isCodPayment = ["COD", "Cash"].includes(order.payment_method);
+      if (isCodPayment && status === "completed") {
+        const [existingPayment] = await db.query(
+          `SELECT id FROM transactions WHERE order_id = ? AND transaction_type = 'payment'`,
+          [orderId],
+        );
+
+        if (existingPayment.length === 0) {
+          const transId = generateId();
+          await db.query(
+            `INSERT INTO transactions (id, order_id, amount, transaction_type, payment_method, status, note) 
+             VALUES (?, ?, ?, 'payment', ?, 'success', ?)`,
+            [
+              transId,
+              orderId,
+              order.total_price,
+              order.payment_method,
+              `Thu tiền đơn COD #${orderId} (Giao thành công)`,
+            ],
+          );
+        }
+      }
+
+      // 2. TẠO DÒNG HOÀN TIỀN KHI HỦY ĐƠN ĐÃ THANH TOÁN (BankTransfer, VNPay, Momo...)
+      if (status === "cancelled" && oldPaymentStatus === "paid") {
+        const [existingRefund] = await db.query(
+          `SELECT id FROM transactions WHERE order_id = ? AND transaction_type = 'refund'`,
+          [orderId],
+        );
+
+        if (existingRefund.length === 0) {
+          const refundId = generateId();
+          await db.query(
+            `INSERT INTO transactions (id, order_id, amount, transaction_type, payment_method, status, note) 
+             VALUES (?, ?, ?, 'refund', ?, 'success', ?)`,
+            [
+              refundId,
+              orderId,
+              order.total_price,
+              order.payment_method,
+              `Hoàn trả tiền (Refund) cho đơn hàng #${orderId} bị hủy bởi Admin`,
+            ],
+          );
+        }
+      }
+    } catch (transError) {
+      console.error("Lỗi khi cập nhật trạng thái dòng tiền:", transError);
     }
 
-    // --- BẮT ĐẦU: LƯU LỊCH SỬ XUẤT KHO KHI XÁC NHẬN ĐƠN ---
+    // Lưu lịch sử xuất kho
     if (status === "confirmed" && oldStatus === "pending") {
       try {
         const [orderItems] = await db.query(
           "SELECT variant_id, quantity FROM order_items WHERE order_id = ?",
           [orderId],
         );
-
         if (orderItems && orderItems.length > 0) {
           for (const item of orderItems) {
             if (item.variant_id) {
@@ -323,9 +374,7 @@ const OrderController = {
         console.error("Lỗi khi ghi log xuất kho:", logError);
       }
     }
-    // --- KẾT THÚC: LƯU LỊCH SỬ XUẤT KHO ---
 
-    // --- BẮT ĐẦU: XỬ LÝ THÔNG BÁO NỘI BỘ VÀ EMAIL ---
     try {
       const userId = order.user_id;
       const type = "order";
@@ -347,7 +396,6 @@ const OrderController = {
         message,
         reference_id,
       );
-
       sendRealTimeNotification(userId, {
         id: insertId,
         type,
@@ -358,7 +406,6 @@ const OrderController = {
         created_at: new Date(),
       });
 
-      // --- BẮT ĐẦU: GỬI EMAIL CẬP NHẬT TRẠNG THÁI CHO KHÁCH (CHẠY NGẦM) ---
       const [userData] = await db.query(
         "SELECT name, email FROM users WHERE id = ?",
         [userId],
@@ -372,11 +419,9 @@ const OrderController = {
           statusBuyerName,
         );
       }
-      // --- KẾT THÚC: GỬI EMAIL CẬP NHẬT TRẠNG THÁI ---
     } catch (error) {
       console.error("Lỗi khi gửi thông báo:", error);
     }
-    // --- KẾT THÚC: XỬ LÝ THÔNG BÁO ---
 
     res.json({ message: "Cập nhật trạng thái đơn hàng thành công" });
   }),
@@ -386,7 +431,35 @@ const OrderController = {
     const userId = req.user.id;
 
     try {
+      const order = await OrderModel.getById(orderId);
+      if (!order) throw new ApiError(404, "Không tìm thấy đơn hàng");
+
       await OrderModel.cancelOrder(orderId, userId);
+
+      // --- TẠO DÒNG HOÀN TIỀN NẾU KHÁCH TỰ HỦY ĐƠN ĐÃ THANH TOÁN ---
+      // Áp dụng cho BankTransfer, Momo, VNPay đã được mark là "paid" lúc tạo đơn
+      if (order.payment_status === "paid") {
+        const [existingRefund] = await db.query(
+          `SELECT id FROM transactions WHERE order_id = ? AND transaction_type = 'refund'`,
+          [orderId],
+        );
+
+        if (existingRefund.length === 0) {
+          const refundId = generateId();
+          await db.query(
+            `INSERT INTO transactions (id, order_id, amount, transaction_type, payment_method, status, note) 
+             VALUES (?, ?, ?, 'refund', ?, 'success', ?)`,
+            [
+              refundId,
+              orderId,
+              order.total_price,
+              order.payment_method,
+              `Hoàn trả tiền (Refund) cho đơn hàng #${orderId} do khách tự hủy`,
+            ],
+          );
+        }
+      }
+
       res.json({ message: "Hủy đơn hàng thành công" });
     } catch (error) {
       throw new ApiError(400, error.message || "Không thể hủy đơn hàng này");

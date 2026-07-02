@@ -60,6 +60,26 @@ const Voucher = {
     const [result] = await db.query("DELETE FROM vouchers WHERE id = ?", [id]);
     return result.affectedRows > 0;
   },
+
+  // --- SỬA LẠI HÀM NÀY TRONG VOUCHER MODEL ---
+  getUsage: async (id) => {
+    // Truy vấn trực tiếp vào bảng orders dựa trên voucher_id hoặc shipping_voucher_id
+    const [usageLogs] = await db.query(
+      `
+      SELECT 
+        id as order_id, 
+        CONCAT(receiver_name, ' - ', phone_number) as user_info, 
+        created_at as used_at 
+      FROM orders 
+      WHERE (voucher_id = ? OR shipping_voucher_id = ?) 
+        AND status != 'cancelled'
+      ORDER BY created_at DESC
+    `,
+      [id, id],
+    ); // Truyền id vào 2 vị trí dấu chấm hỏi
+
+    return usageLogs;
+  },
 };
 
 module.exports = Voucher;

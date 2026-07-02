@@ -141,14 +141,26 @@
           </div>
         </template>
 
-        <template v-slot:item.usage="{ item }">
-          <span class="text-body-2 text-black font-weight-bold">{{
-            item.used_count
-          }}</span>
-          <span class="text-caption text-grey-darken-1 mx-1">/</span>
-          <span class="text-body-2 text-black">{{
-            item.usage_limit || "∞"
-          }}</span>
+        <!-- Sửa cột usage thành nút bấm -->
+        <template v-slot:item.used_count="{ item }">
+          <div
+            class="d-flex justify-center align-center cursor-pointer px-2 py-1 rounded hover-bg"
+            @click="openUsageDetails(item)"
+          >
+            <span class="text-body-2 text-indigo-darken-4 font-weight-bold">{{
+              item.used_count
+            }}</span>
+            <span class="text-caption text-grey-darken-1 mx-1">/</span>
+            <span class="text-body-2 text-black">{{
+              item.usage_limit || "∞"
+            }}</span>
+            <v-icon size="16" color="indigo-darken-2" class="ml-1"
+              >mdi-information-outline</v-icon
+            >
+            <v-tooltip activator="parent" location="top"
+              >Xem người dùng</v-tooltip
+            >
+          </div>
         </template>
 
         <template v-slot:item.time="{ item }">
@@ -417,6 +429,54 @@
         {{ snackbar.text }}
       </div>
     </v-snackbar>
+    <!-- DIALOG HIỂN THỊ CHI TIẾT NGƯỜI DÙNG VOUCHER -->
+    <v-dialog v-model="showUsageModal" max-width="650px" scrollable>
+      <v-card rounded="xl" elevation="8" theme="light">
+        <v-card-title
+          class="bg-indigo-darken-4 text-white pa-4 d-flex justify-space-between align-center"
+        >
+          <div class="d-flex align-center gap-2">
+            <v-icon color="white">mdi-history</v-icon>
+            <span class="font-weight-bold text-subtitle-1"
+              >Lịch sử dùng Voucher: {{ selectedVoucherCode }}</span
+            >
+          </div>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            color="white"
+            density="comfortable"
+            @click="showUsageModal = false"
+          ></v-btn>
+        </v-card-title>
+
+        <v-card-text class="pa-0" style="max-height: 60vh">
+          <v-data-table
+            :headers="usageHeaders"
+            :items="usageDetails"
+            :loading="isUsageLoading"
+            hover
+            density="comfortable"
+            class="bg-white"
+            no-data-text="Không tìm thấy chi tiết. Các đơn hàng cũ có thể đã được lưu trữ hoặc dữ liệu đã bị xóa khỏi hệ thống."
+          >
+            <template v-slot:item.index="{ index }">
+              <span class="font-weight-bold text-grey-darken-2">{{
+                index + 1
+              }}</span>
+            </template>
+            <template v-slot:item.used_at="{ item }">
+              {{ formatDateDisplay(item.used_at) }}
+            </template>
+            <template v-slot:item.order_id="{ item }">
+              <span class="text-indigo-darken-3 font-weight-bold"
+                >#{{ item.order_id }}</span
+              >
+            </template>
+          </v-data-table>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -433,6 +493,7 @@ const isLoading = ref(false);
 const search = ref("");
 const confirmDialogRef = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
+
 const headers = [
   {
     title: "STT",
@@ -444,7 +505,7 @@ const headers = [
   { title: "Mã Voucher", key: "code", align: "start", width: "160px" },
   { title: "Loại / Giá trị", key: "discount", align: "start" },
   { title: "Điều kiện", key: "condition", align: "start" },
-  { title: "Đã dùng / Giới hạn", key: "usage", align: "center" },
+  { title: "Đã dùng / Giới hạn", key: "used_count", align: "center" },
   { title: "Thời gian", key: "time", align: "start" },
   {
     title: "Thao tác",
@@ -599,6 +660,49 @@ const handleDelete = async (voucher) => {
     isLoading.value = false;
   }
 };
+import api from "@/services/api.service"; // Đảm bảo đã import api (nếu chưa có)
+
+// --- STATE & HÀM CHO TÍNH NĂNG XEM NGƯỜI DÙNG ---
+const showUsageModal = ref(false);
+const isUsageLoading = ref(false);
+const usageDetails = ref([]);
+const selectedVoucherCode = ref("");
+
+const usageHeaders = [
+  {
+    title: "STT",
+    key: "index",
+    align: "center",
+    width: "70px",
+    sortable: false,
+  },
+  { title: "Người dùng (Tên & SĐT)", key: "user_info", align: "start" },
+  { title: "Mã Đơn", key: "order_id", align: "center" },
+  { title: "Ngày áp dụng", key: "used_at", align: "start" },
+];
+
+const openUsageDetails = async (voucher) => {
+  if (voucher.used_count === 0) {
+    showMessage("Voucher này chưa có ai sử dụng.", "info");
+    return;
+  }
+
+  selectedVoucherCode.value = voucher.code;
+  showUsageModal.value = true;
+  isUsageLoading.value = true;
+  usageDetails.value = [];
+
+  try {
+    const response = await api.get(`/vouchers/${voucher.id}/usage`);
+    usageDetails.value = response.data;
+  } catch (error) {
+    console.error(error);
+    showMessage("Không thể tải chi tiết lịch sử dùng voucher", "error");
+  } finally {
+    isUsageLoading.value = false;
+  }
+};
+// ---------------------------------------------
 
 onMounted(() => {
   fetchVouchers();
@@ -653,5 +757,9 @@ input:disabled {
 
 :deep(.v-data-table td) {
   vertical-align: middle;
+}
+.hover-bg:hover {
+  background-color: #e8eaf6;
+  transition: 0.2s ease-in-out;
 }
 </style>

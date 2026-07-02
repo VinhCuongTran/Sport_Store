@@ -45,6 +45,12 @@ const VoucherController = {
     if (!isDeleted) throw new ApiError(404, "Không tìm thấy voucher để xóa");
     res.json({ message: "Xóa voucher thành công" });
   }),
+
+  getUsage: asyncHandler(async (req, res) => {
+    const data = await VoucherModel.getUsage(req.params.id);
+    res.json(data);
+  }),
+  
 };
 
 module.exports = VoucherController;
