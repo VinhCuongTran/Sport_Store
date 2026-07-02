@@ -291,37 +291,50 @@
       </v-container>
     </div>
 
-    <!-- DIALOG VOICE SEARCH -->
-    <v-dialog v-model="voiceDialog" max-width="400" persistent>
-      <v-card class="pa-8 text-center rounded-xl" elevation="10">
-        <div class="mic-pulse-wrapper">
+    <!-- DIALOG VOICE SEARCH CHỈNH SỬA LẠI UI LÀM ĐẸP -->
+    <v-dialog v-model="voiceDialog" max-width="420" persistent>
+      <v-card
+        class="pa-8 text-center rounded-xl bg-blue-grey-darken-4 text-white"
+        elevation="24"
+      >
+        <h3 class="text-h6 font-weight-bold mb-8 text-grey-lighten-1">
+          Tìm kiếm bằng giọng nói
+        </h3>
+
+        <div class="mic-pulse-wrapper mb-8">
           <div
             class="mic-pulse-ring"
             :style="{ transform: `scale(${audioVolume})` }"
           ></div>
-          <v-avatar color="red" size="80" class="mic-avatar elevation-4">
-            <v-icon size="45" color="white">mdi-microphone</v-icon>
+          <v-avatar
+            color="red-accent-3"
+            size="90"
+            class="mic-avatar elevation-8"
+          >
+            <v-icon size="48" color="white">mdi-microphone</v-icon>
           </v-avatar>
         </div>
 
-        <h3
-          class="text-h6 font-weight-regular mt-8 mb-6 text-grey-darken-3"
-          style="min-height: 32px"
+        <p
+          class="text-h5 font-weight-regular mt-4 mb-8 text-white"
+          style="min-height: 40px; line-height: 1.4"
         >
-          {{ voiceText }}
-        </h3>
+          "{{ voiceText }}"
+        </p>
 
         <v-btn
           variant="tonal"
-          color="grey-darken-1"
+          color="grey-lighten-1"
           rounded="pill"
           @click="closeVoiceSearch"
-          class="font-weight-bold px-8 mx-auto"
+          class="font-weight-bold px-10 mx-auto text-none"
+          size="large"
         >
-          Hủy
+          Hủy tìm kiếm
         </v-btn>
       </v-card>
     </v-dialog>
+
     <!-- DIALOG TIẾN TRÌNH TÌM KIẾM BẰNG HÌNH ẢNH -->
     <v-dialog v-model="isSearchingImage" max-width="360" persistent>
       <v-card class="pa-8 text-center rounded-xl" elevation="10">
@@ -341,38 +354,86 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="searchResultDialog" max-width="800">
-      <v-card class="pa-4">
-        <v-card-title>Kết quả tìm kiếm từ hình ảnh</v-card-title>
-        <v-card-text>
-          <v-row>
+    <!-- DIALOG KẾT QUẢ TÌM KIẾM HÌNH ẢNH -->
+    <!-- Không dùng "persistent" để cho phép click ra ngoài tự đóng -->
+    <v-dialog v-model="searchResultDialog" max-width="900" scrollable>
+      <v-card class="rounded-xl" elevation="12">
+        
+        <!-- Header Dialog: Có nút Close (X) nằm ở góc trên cùng bên phải -->
+        <v-card-title class="d-flex align-center bg-grey-lighten-4 py-4 px-6 border-b">
+          <v-icon color="red" class="mr-3" size="32">mdi-image-search</v-icon>
+          <span class="text-h6 font-weight-bold">Kết quả tìm kiếm từ ảnh của bạn</span>
+          <v-spacer></v-spacer>
+          
+          <!-- Nút thoát phía trên -->
+          <v-btn icon variant="text" color="grey-darken-1" @click="searchResultDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <!-- Nội dung Dialog -->
+        <v-card-text class="pa-6 bg-grey-lighten-5">
+          <v-row v-if="searchResults.length > 0">
             <v-col
               v-for="product in searchResults"
               :key="product.id"
-              cols="6"
+              cols="12"
+              sm="6"
               md="4"
             >
-              <v-card :to="`/product/${product.id}`" hover>
-                <v-img :src="product.thumbnail" height="150" cover></v-img>
-                <v-card-text>
-                  <div class="text-subtitle-2 font-weight-bold">
+              <!-- Thêm @click="searchResultDialog = false" để tự đóng khi click vào 1 sản phẩm -->
+              <v-card
+                :to="`/product/${product.id}`"
+                @click="searchResultDialog = false"
+                hover
+                class="h-100 rounded-lg d-flex flex-column overflow-hidden"
+              >
+                <v-img
+                  :src="product.matched_image"
+                  height="220"
+                  cover
+                  class="bg-white border-b"
+                >
+                  <template v-slot:placeholder>
+                    <v-row
+                      class="fill-height ma-0"
+                      align="center"
+                      justify="center"
+                    >
+                      <v-progress-circular
+                        indeterminate
+                        color="grey-lighten-1"
+                      ></v-progress-circular>
+                    </v-row>
+                  </template>
+                </v-img>
+                <v-card-text class="flex-grow-1 d-flex flex-column pt-4">
+                  <div
+                    class="text-subtitle-1 font-weight-bold text-truncate mb-2"
+                    :title="product.name"
+                  >
                     {{ product.name }}
                   </div>
-                  <div class="text-red">
-                    {{ product.min_price?.toLocaleString("vi-VN") }} VNĐ
+                  <v-spacer></v-spacer>
+                  <div class="d-flex align-center mt-2">
+                    <span class="text-red font-weight-bold text-h6">
+                      {{ product.min_price?.toLocaleString("vi-VN") }} VNĐ
+                    </span>
                   </div>
                 </v-card-text>
               </v-card>
             </v-col>
           </v-row>
-          <div v-if="searchResults.length === 0" class="text-center py-5">
-            Không tìm thấy sản phẩm nào khớp.
+
+          <div v-else class="text-center py-12">
+            <v-icon size="80" color="grey-lighten-1" class="mb-4"
+              >mdi-package-variant-closed</v-icon
+            >
+            <div class="text-h6 text-grey-darken-1">
+              Rất tiếc, không tìm thấy sản phẩm nào khớp.
+            </div>
           </div>
         </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="grey" @click="searchResultDialog = false">Đóng</v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
   </header>
@@ -412,43 +473,6 @@ const triggerImageUpload = () => {
   if (isSearchingImage.value) return; // Đang tìm kiếm thì chặn bấm lại
   fileInput.value.click();
 };
-
-// Xử lý khi người dùng đã chọn ảnh
-// const handleImageSearch = async (event) => {
-//   const file = event.target.files[0];
-//   if (!file) return;
-
-//   try {
-//     isSearchingImage.value = true;
-//     toast.info("AI đang phân tích và đối chiếu kho ảnh...");
-
-//     const formData = new FormData();
-//     formData.append("image", file);
-
-//     const response = await axios.post('http://localhost:3000/api/search/image', formData);
-
-//     if (response.data.success && response.data.products.length > 0) {
-//       toast.success("Đã tìm thấy sản phẩm giống nhất!");
-
-//       // XỬ LÝ CLICK ĐI ĐƯỢC NHƯ BẠN MUỐN:
-//       // Cách 1: Tự động chuyển thẳng tới trang chi tiết sản phẩm giống nhất đầu tiên (Rất ngầu!)
-//       const bestMatchId = response.data.products[0].id;
-//       router.push(`/products/${bestMatchId}`);
-
-//       // (Lựa chọn) Cách 2: Nếu bạn muốn hiển thị 1 List sản phẩm thì lưu nó vào 1 biến ref() và mở popup hiển thị v-card các sản phẩm đó. Tùy ý giao diện của bạn.
-//     }
-
-//   } catch (error) {
-//     if (error.response && error.response.status === 404) {
-//       toast.error("Không tìm thấy sản phẩm nào giống với ảnh của bạn.");
-//     } else {
-//       toast.error("Lỗi khi tìm kiếm hình ảnh.");
-//     }
-//   } finally {
-//     isSearchingImage.value = false;
-//     event.target.value = ''; // Reset file input
-//   }
-// };
 
 // ====================================
 const searchResultDialog = ref(false); // Ref để mở dialog
@@ -490,8 +514,11 @@ const handleImageSearch = async (event) => {
     const formData = new FormData();
     formData.append("image", file);
 
-    const response = await axios.post('http://localhost:3000/api/search/image', formData);
-    
+    const response = await axios.post(
+      "http://localhost:3000/api/search/image",
+      formData,
+    );
+
     if (response.data.success) {
       searchResults.value = response.data.products;
       searchResultDialog.value = true; // MỞ DIALOG THAY VÌ CHUYỂN TRANG
@@ -501,7 +528,7 @@ const handleImageSearch = async (event) => {
   } finally {
     stopSearchSteps();
     isSearchingImage.value = false;
-    event.target.value = '';
+    event.target.value = "";
   }
 };
 // ====================================
@@ -522,8 +549,14 @@ const playBeep = (type = "start") => {
   const osc = ctx.createOscillator();
   const gainNode = ctx.createGain();
 
+  // Đổi loại sóng thanh thành vuông (square) để âm thanh đanh và to hơn hẳn sine
+  osc.type = "square"; 
+
   osc.connect(gainNode);
   gainNode.connect(ctx.destination);
+
+  // Set gain lên ngưỡng cao hơn (2.0) để tăng âm lượng
+  gainNode.gain.setValueAtTime(2.0, ctx.currentTime);
 
   if (type === "start") {
     osc.frequency.setValueAtTime(440, ctx.currentTime);
@@ -834,5 +867,29 @@ const getNotificationRoute = (noti) => {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+/* Tìm và thay thế đoạn CSS của phần mic-pulse... bằng đoạn này */
+.mic-pulse-wrapper {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+.mic-pulse-ring {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  /* Chỉnh màu sóng âm sáng hơn để nổi trên nền tối */
+  background-color: rgba(255, 82, 82, 0.25);
+  border-radius: 50%;
+  transition: transform 0.05s linear;
+  box-shadow: 0 0 30px rgba(255, 82, 82, 0.4);
+}
+.mic-avatar {
+  z-index: 2;
+  border: 4px solid rgba(255, 255, 255, 0.1);
 }
 </style>
