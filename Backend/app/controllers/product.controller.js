@@ -1,6 +1,7 @@
 const ProductModel = require("../models/product.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const { getImageEmbeddingFromUrl } = require("../utils/embedding.util");
 
 const cloudinary = require("cloudinary").v2;
 
@@ -24,6 +25,26 @@ const extractPublicId = (url) => {
     console.error("Lỗi khi tách public_id:", error);
     return null;
   }
+};
+
+// Tính embedding (vector) cho danh sách ảnh vừa upload lên Cloudinary.
+// Ảnh nào lỗi (mạng, model...) sẽ có embedding = null, không làm hỏng cả request.
+const attachEmbeddings = async (images) => {
+  return Promise.all(
+    images.map(async (img) => {
+      try {
+        const embedding = await getImageEmbeddingFromUrl(img.image_url);
+        return { ...img, embedding: JSON.stringify(embedding) };
+      } catch (error) {
+        console.error(
+          "Lỗi tính embedding cho ảnh:",
+          img.image_url,
+          error.message,
+        );
+        return { ...img, embedding: null };
+      }
+    }),
+  );
 };
 
 const Product = {
@@ -50,7 +71,7 @@ const Product = {
 
     let images = [];
     if (req.files && req.files.length > 0) {
-      images = req.files.map((file, index) => {
+      const rawImages = req.files.map((file, index) => {
         const meta = imagesMeta[index] || {};
         return {
           image_url: file.path,
@@ -59,6 +80,9 @@ const Product = {
             meta.is_thumbnail !== undefined ? meta.is_thumbnail : index === 0,
         };
       });
+
+      // Tính vector cho từng ảnh song song (không làm chậm quá nhiều vì chạy đồng thời)
+      images = await attachEmbeddings(rawImages);
     }
 
     const productId = await ProductModel.create(productData, variants, images);
@@ -70,7 +94,11 @@ const Product = {
   }),
 
   findAll: asyncHandler(async (req, res) => {
-    const data = await ProductModel.getAll();
+    // 1. Bắt lấy từ khóa tìm kiếm mà frontend gửi lên
+    const searchKeyword = req.query.search || "";
+
+    // 2. Truyền từ khóa đó vào model
+    const data = await ProductModel.getAll(searchKeyword);
     res.json(data);
   }),
 
@@ -132,7 +160,7 @@ const Product = {
 
     let newImages = [];
     if (req.files && req.files.length > 0) {
-      newImages = req.files.map((file, index) => {
+      const rawNewImages = req.files.map((file, index) => {
         const meta = parsedImagesMeta[index] || {};
         return {
           image_url: file.path,
@@ -141,6 +169,8 @@ const Product = {
             meta.is_thumbnail !== undefined ? meta.is_thumbnail : false, // Nếu k có sẽ tự tính toán logic DB
         };
       });
+
+      newImages = await attachEmbeddings(rawNewImages);
     }
 
     const success = await ProductModel.update(

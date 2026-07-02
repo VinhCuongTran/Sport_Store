@@ -32,6 +32,24 @@
             @keyup.enter="handleSearch"
           >
             <template v-slot:append-inner>
+              <v-progress-circular
+                v-if="isSearchingImage"
+                indeterminate
+                size="20"
+                width="2"
+                color="red"
+                class="mr-2"
+              ></v-progress-circular>
+              <v-icon
+                v-else
+                @click="triggerImageUpload"
+                color="grey-darken-1"
+                class="cursor-pointer mr-2 hover-red"
+                title="Tìm kiếm bằng hình ảnh"
+              >
+                mdi-camera-outline
+              </v-icon>
+
               <v-icon
                 @click="startVoiceSearch"
                 color="grey-darken-1"
@@ -40,11 +58,20 @@
               >
                 mdi-microphone-outline
               </v-icon>
+
               <v-icon @click="handleSearch" class="cursor-pointer text-black">
                 mdi-arrow-right-circle
               </v-icon>
             </template>
           </v-text-field>
+
+          <input
+            type="file"
+            ref="fileInput"
+            accept="image/*"
+            class="d-none"
+            @change="handleImageSearch"
+          />
         </v-col>
 
         <v-col
@@ -295,6 +322,59 @@
         </v-btn>
       </v-card>
     </v-dialog>
+    <!-- DIALOG TIẾN TRÌNH TÌM KIẾM BẰNG HÌNH ẢNH -->
+    <v-dialog v-model="isSearchingImage" max-width="360" persistent>
+      <v-card class="pa-8 text-center rounded-xl" elevation="10">
+        <v-progress-circular
+          indeterminate
+          size="64"
+          width="5"
+          color="red"
+          class="mb-6"
+        ></v-progress-circular>
+        <h3
+          class="text-h6 font-weight-regular text-grey-darken-3"
+          style="min-height: 32px"
+        >
+          {{ searchStepText }}
+        </h3>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="searchResultDialog" max-width="800">
+      <v-card class="pa-4">
+        <v-card-title>Kết quả tìm kiếm từ hình ảnh</v-card-title>
+        <v-card-text>
+          <v-row>
+            <v-col
+              v-for="product in searchResults"
+              :key="product.id"
+              cols="6"
+              md="4"
+            >
+              <v-card :to="`/product/${product.id}`" hover>
+                <v-img :src="product.thumbnail" height="150" cover></v-img>
+                <v-card-text>
+                  <div class="text-subtitle-2 font-weight-bold">
+                    {{ product.name }}
+                  </div>
+                  <div class="text-red">
+                    {{ product.min_price?.toLocaleString("vi-VN") }} VNĐ
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+          <div v-if="searchResults.length === 0" class="text-center py-5">
+            Không tìm thấy sản phẩm nào khớp.
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey" @click="searchResultDialog = false">Đóng</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </header>
 </template>
 
@@ -306,6 +386,7 @@ import SportCategoryMenu from "@/components/SportCategoryMenu.vue";
 import { io } from "socket.io-client";
 import { useToast } from "vue-toastification";
 import NotificationService from "@/services/notification.service.js";
+import axios from "axios";
 
 const router = useRouter();
 const route = useRoute();
@@ -321,6 +402,109 @@ const socket = ref(null);
 const notifications = ref([]);
 const notiMenuOpen = ref(false);
 const toast = useToast();
+
+// Thêm ref cho file input
+const fileInput = ref(null);
+const isSearchingImage = ref(false);
+
+// Kích hoạt click vào input file ẩn
+const triggerImageUpload = () => {
+  if (isSearchingImage.value) return; // Đang tìm kiếm thì chặn bấm lại
+  fileInput.value.click();
+};
+
+// Xử lý khi người dùng đã chọn ảnh
+// const handleImageSearch = async (event) => {
+//   const file = event.target.files[0];
+//   if (!file) return;
+
+//   try {
+//     isSearchingImage.value = true;
+//     toast.info("AI đang phân tích và đối chiếu kho ảnh...");
+
+//     const formData = new FormData();
+//     formData.append("image", file);
+
+//     const response = await axios.post('http://localhost:3000/api/search/image', formData);
+
+//     if (response.data.success && response.data.products.length > 0) {
+//       toast.success("Đã tìm thấy sản phẩm giống nhất!");
+
+//       // XỬ LÝ CLICK ĐI ĐƯỢC NHƯ BẠN MUỐN:
+//       // Cách 1: Tự động chuyển thẳng tới trang chi tiết sản phẩm giống nhất đầu tiên (Rất ngầu!)
+//       const bestMatchId = response.data.products[0].id;
+//       router.push(`/products/${bestMatchId}`);
+
+//       // (Lựa chọn) Cách 2: Nếu bạn muốn hiển thị 1 List sản phẩm thì lưu nó vào 1 biến ref() và mở popup hiển thị v-card các sản phẩm đó. Tùy ý giao diện của bạn.
+//     }
+
+//   } catch (error) {
+//     if (error.response && error.response.status === 404) {
+//       toast.error("Không tìm thấy sản phẩm nào giống với ảnh của bạn.");
+//     } else {
+//       toast.error("Lỗi khi tìm kiếm hình ảnh.");
+//     }
+//   } finally {
+//     isSearchingImage.value = false;
+//     event.target.value = ''; // Reset file input
+//   }
+// };
+
+// ====================================
+const searchResultDialog = ref(false); // Ref để mở dialog
+const searchResults = ref([]); // Danh sách kết quả
+
+// --- CÁC BƯỚC HIỂN THỊ TIẾN TRÌNH TÌM KIẾM BẰNG ẢNH ---
+const searchSteps = [
+  "Đang tải ảnh lên...",
+  "Đang phân tích hình ảnh...",
+  "Đang so khớp với sản phẩm trong kho...",
+];
+const searchStepText = ref(searchSteps[0]);
+let searchStepInterval = null;
+
+const startSearchSteps = () => {
+  let i = 0;
+  searchStepText.value = searchSteps[0];
+  searchStepInterval = setInterval(() => {
+    i = (i + 1) % searchSteps.length;
+    searchStepText.value = searchSteps[i];
+  }, 1200);
+};
+
+const stopSearchSteps = () => {
+  if (searchStepInterval) {
+    clearInterval(searchStepInterval);
+    searchStepInterval = null;
+  }
+};
+
+const handleImageSearch = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    isSearchingImage.value = true;
+    startSearchSteps();
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await axios.post('http://localhost:3000/api/search/image', formData);
+    
+    if (response.data.success) {
+      searchResults.value = response.data.products;
+      searchResultDialog.value = true; // MỞ DIALOG THAY VÌ CHUYỂN TRANG
+    }
+  } catch (error) {
+    toast.error("Không tìm thấy sản phẩm hoặc lỗi server.");
+  } finally {
+    stopSearchSteps();
+    isSearchingImage.value = false;
+    event.target.value = '';
+  }
+};
+// ====================================
 
 // --- STATE TÌM KIẾM GIỌNG NÓI ---
 const voiceDialog = ref(false);

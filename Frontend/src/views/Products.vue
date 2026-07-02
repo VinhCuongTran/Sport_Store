@@ -201,15 +201,27 @@ const getProductsForFilter = (excludeFilter = null) => {
   let result = [...products.value];
 
   if (searchQuery.value) {
+    // 1. Tách chuỗi tìm kiếm thành các từ đơn lẻ
     const searchTerms = removeAccents(searchQuery.value)
+      .toLowerCase()
       .split(" ")
       .filter((term) => term.trim() !== "");
 
     result = result.filter((p) => {
-      const productName = removeAccents(p.name);
-      return searchTerms.every((term) => productName.includes(term));
+      // 2. Gộp Tên sản phẩm, Tên danh mục và Môn thể thao để tìm kiếm
+      const searchableText = removeAccents(
+        `${p.name} ${p.category_name || ""} ${p.sport_name || ""}`,
+      ).toLowerCase();
+
+      // 3. Kiểm tra xem TẤT CẢ các từ khóa có xuất hiện hợp lệ không
+      // Sử dụng '\\b' để đảm bảo từ khóa phải bắt đầu bằng một từ độc lập
+      return searchTerms.every((term) => {
+        const regex = new RegExp("\\b" + term);
+        return regex.test(searchableText);
+      });
     });
   }
+  
   if (selectedSport.value) {
     const sportCategoryIds = categories.value
       .filter((c) => c.sport_id === selectedSport.value)

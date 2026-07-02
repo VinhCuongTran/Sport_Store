@@ -49,9 +49,10 @@ const Product = {
           img.is_thumbnail === 1
             ? 1
             : 0,
+          img.embedding || null,
         ]);
         await connection.query(
-          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail) VALUES ?",
+          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail, embedding) VALUES ?",
           [imageValues],
         );
       }
@@ -66,8 +67,8 @@ const Product = {
     }
   },
 
-  getAll: async () => {
-    const [rows] = await db.query(`
+  getAll: async (searchKeyword = "") => {
+    let query = `
       SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name,
              (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumbnail,
              (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price,
@@ -84,7 +85,20 @@ const Product = {
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN sports s ON c.sport_id = s.id
-    `);
+    `;
+
+    const params = [];
+
+    // NẾU CÓ TỪ KHÓA THÌ THÊM LỆNH WHERE LIKE VÀO SQL
+    if (searchKeyword && searchKeyword.trim() !== "") {
+      query += ` WHERE p.name LIKE ? OR p.description LIKE ? OR c.name LIKE ? OR s.name LIKE ?`;
+      const keyword = `%${searchKeyword.trim()}%`;
+      params.push(keyword, keyword, keyword, keyword);
+    }
+
+    query += ` ORDER BY p.created_at DESC`;
+
+    const [rows] = await db.query(query, params);
     return rows;
   },
 
@@ -117,7 +131,7 @@ const Product = {
     );
 
     const [images] = await db.query(
-      "SELECT * FROM product_images WHERE product_id = ?",
+      "SELECT id, product_id, image_url, color, is_thumbnail FROM product_images WHERE product_id = ?",
       [id],
     );
 
@@ -249,9 +263,10 @@ const Product = {
           img.is_thumbnail === 1
             ? 1
             : 0,
+          img.embedding || null,
         ]);
         await connection.query(
-          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail) VALUES ?",
+          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail, embedding) VALUES ?",
           [imageValues],
         );
       }

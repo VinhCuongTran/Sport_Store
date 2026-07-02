@@ -163,8 +163,9 @@
               <v-avatar size="30" class="mr-3 border rounded">
                 <v-img
                   :src="
+                    productContext.thumbnail ||
                     productContext.image_url ||
-                    productContext.images?.[0] ||
+                    productContext.images?.[0]?.image_url ||
                     'https://placehold.co/100'
                   "
                 ></v-img>
@@ -460,7 +461,7 @@ defineExpose({ openChatWithOrder, openChatWithProduct });
 
 const initSocket = () => {
   socket = io(SOCKET_URL, { query: { userId: currentUser.value.id } });
-  
+
   socket.emit("user_connected", String(currentUser.value.id));
 
   // Khởi tạo các user đang online lúc vừa load web
@@ -534,9 +535,9 @@ const sendMessage = () => {
   let pImage = null;
   if (productContext.value) {
     pImage =
+      productContext.value.thumbnail ||
       productContext.value.image_url ||
-      productContext.value.images?.[0]?.image_url ||
-      productContext.value.images?.[0];
+      productContext.value.images?.[0]?.image_url;
   }
 
   const msgData = {
