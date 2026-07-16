@@ -76,14 +76,15 @@ create index product_id
 
 create table product_variants
 (
-    id           varchar(6)                  not null
+    id             varchar(6)                  not null
         primary key,
-    product_id   varchar(6)                  not null,
-    size         varchar(50)                 not null,
-    color        varchar(50)                 not null,
-    price        decimal(12, 2)              not null,
-    stock        int            default 0    not null,
-    import_price decimal(10, 2) default 0.00 null,
+    product_id     varchar(6)                  not null,
+    size           varchar(50)                 not null,
+    color          varchar(50)                 not null,
+    price          decimal(12, 2)              not null,
+    stock          int            default 0    not null,
+    reserved_stock int            default 0    not null,
+    import_price   decimal(10, 2) default 0.00 null,
     constraint fk_pv_product
         foreign key (product_id) references products (id)
             on delete cascade
@@ -210,6 +211,21 @@ create table reviews
         foreign key (user_id) references users (id)
             on delete cascade,
     check (`rating` between 1 and 5)
+);
+
+create table stock_tickets
+(
+    id           varchar(36)                              not null
+        primary key,
+    staff_id     varchar(20)                              not null,
+    supplier     varchar(255)                             null,
+    note         text                                     null,
+    total_items  int            default 0                 null,
+    total_amount decimal(15, 2) default 0.00              null,
+    created_at   timestamp      default CURRENT_TIMESTAMP null,
+    constraint fk_st_staff
+        foreign key (staff_id) references users (id)
+            on delete cascade
 );
 
 create table vouchers

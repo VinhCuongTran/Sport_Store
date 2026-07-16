@@ -537,6 +537,7 @@ const submitOrder = async () => {
     const res = await OrderService.create(payload);
 
     sessionStorage.removeItem("checkout_items");
+    sessionStorage.removeItem("is_from_cart");
 
     const createdOrderId = res.order_id;
 
@@ -579,6 +580,15 @@ onMounted(() => {
     checkoutItems.value = JSON.parse(itemsStr);
   } else {
     router.push("/cart");
+    return; // Đảm bảo dừng lại nếu không có item
+  }
+
+  // Lấy trạng thái mua ngay hay từ giỏ hàng
+  const isFromCartFlag = sessionStorage.getItem("is_from_cart");
+  if (isFromCartFlag !== null) {
+    isFromCart.value = isFromCartFlag === "true";
+  } else {
+    isFromCart.value = true; // Mặc định nếu không có
   }
 
   fetchAddresses();

@@ -4,8 +4,8 @@ const ApiError = require("../utils/api.error");
 const { getImageEmbedding } = require("../utils/embedding.util");
 const { cosineSimilarity } = require("../utils/vector.util");
 
-const SIMILARITY_THRESHOLD = 0.75;
-const MAX_RESULTS = 10;
+const SIMILARITY_THRESHOLD = 0.75; // Giữ nguyên ngưỡng của bạn
+const MAX_RESULTS = 20; // Tăng lên 20 để hiển thị nhiều kết quả hơn (bạn đang để 10)
 
 const SearchController = {
   searchByImage: asyncHandler(async (req, res) => {
@@ -47,7 +47,6 @@ const SearchController = {
       const score = cosineSimilarity(queryEmbedding, vec);
       const current = bestMatchByProduct.get(img.product_id);
 
-      // Nếu sản phẩm chưa có trong Map, hoặc ảnh này giống hơn ảnh trước đó của cùng sản phẩm
       if (current === undefined || score > current.score) {
         bestMatchByProduct.set(img.product_id, {
           score: score,
@@ -64,14 +63,6 @@ const SearchController = {
       }))
       .sort((a, b) => b.score - a.score);
 
-    console.log(
-      "[search debug] Tổng số ảnh có embedding:",
-      images.length,
-      "| Tổng số sản phẩm distinct:",
-      bestMatchByProduct.size,
-    );
-    console.log("[search debug] Top 5 điểm giống nhất:", scoredAll.slice(0, 5));
-
     const scored = scoredAll
       .filter((s) => s.score >= SIMILARITY_THRESHOLD)
       .slice(0, MAX_RESULTS);
@@ -83,22 +74,70 @@ const SearchController = {
       );
     }
 
-    // 4. Lấy đầy đủ thông tin sản phẩm (Không cần subquery thumbnail nữa vì đã có matched_image)
+    // 4. Lấy ĐẦY ĐỦ thông tin sản phẩm (Giống hệt API Get Products)
     const matchedIds = scored.map((m) => m.product_id);
     const placeholders = matchedIds.map(() => "?").join(",");
+
     const [products] = await db.query(
-      `SELECT p.id, p.name,
-          (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price
+      `SELECT 
+          p.*,
+          c.name as category_name,
+          b.name as brand_name,
+          (
+              SELECT JSON_ARRAYAGG(pi.image_url)
+              FROM product_images pi
+              WHERE pi.product_id = p.id
+          ) as images,
+          (
+              SELECT MIN(price)
+              FROM product_variants
+              WHERE product_id = p.id
+          ) as min_price,
+          (
+              SELECT SUM(quantity)
+              FROM order_items oi
+              JOIN orders o ON oi.order_id = o.id
+              WHERE oi.product_id = p.id AND o.status = 'completed'
+          ) as sold_count,
+          (
+              SELECT AVG(rating)
+              FROM reviews r
+              WHERE r.product_id = p.id
+          ) as average_rating,
+          (
+              SELECT GROUP_CONCAT(DISTINCT color SEPARATOR ',')
+              FROM product_variants
+              WHERE product_id = p.id
+          ) as colors
        FROM products p
+       LEFT JOIN categories c ON p.category_id = c.id
+       LEFT JOIN brands b ON p.brand_id = b.id
        WHERE p.id IN (${placeholders})`,
       matchedIds,
     );
 
-    // Ghép matched_image vào kết quả trả về và sắp xếp lại theo điểm số cao nhất
+    // 5. Ghép matched_image vào kết quả trả về và sắp xếp lại theo điểm số cao nhất AI
     const finalProducts = products.map((p) => {
       const matchData = scored.find((s) => s.product_id === p.id);
+
+      // Xử lý active_discount (nếu đang trong thời gian sale)
+      let activeDiscount = 0;
+      if (p.discount_percent > 0 && p.sale_start && p.sale_end) {
+        const now = new Date();
+        const start = new Date(p.sale_start);
+        const end = new Date(p.sale_end);
+        if (now >= start && now <= end) {
+          activeDiscount = p.discount_percent;
+        }
+      }
+
       return {
         ...p,
+        active_discount: activeDiscount,
+        // Ép kiểu số để frontend dễ sort/filter
+        min_price: p.min_price ? parseFloat(p.min_price) : 0,
+        sold_count: p.sold_count ? parseInt(p.sold_count) : 0,
+        average_rating: p.average_rating ? parseFloat(p.average_rating) : 0,
         matched_image: matchData ? matchData.matched_image : null,
       };
     });
