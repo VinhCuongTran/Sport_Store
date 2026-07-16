@@ -176,6 +176,10 @@
                     >Hồ sơ cá nhân</v-list-item-title
                   ></v-list-item
                 >
+                <v-list-item to="/favorites" prepend-icon="mdi-heart-outline"
+                  ><v-list-item-title>Sản phẩm yêu thích</v-list-item-title>
+                </v-list-item>
+
                 <v-list-item
                   to="/orders"
                   prepend-icon="mdi-clipboard-text-outline"
@@ -355,20 +359,16 @@ const handleImageSearch = (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  // 1. Lưu file vào state service
   searchState.imageFile = file;
   searchState.imagePreview = URL.createObjectURL(file);
   searchState.isNewImageUpload = true;
 
-  // 2. Chuyển hướng sang trang kết quả
   router.push({ path: "/search", query: { type: "image" } });
-
   event.target.value = "";
 };
 
 const handleSearch = () => {
   if (searchKeyword.value.trim() !== "") {
-    // Chuyển sang route /search thay vì /products
     router.push({
       path: "/search",
       query: { q: searchKeyword.value.trim() },
@@ -376,7 +376,6 @@ const handleSearch = () => {
   }
 };
 
-// --- STATE TÌM KIẾM GIỌNG NÓI ---
 const voiceDialog = ref(false);
 const voiceText = ref("Đang lắng nghe...");
 const audioVolume = ref(1);
@@ -476,7 +475,7 @@ const startVoiceSearch = async () => {
 
       setTimeout(() => {
         closeVoiceSearch();
-        handleSearch(); // Tự động gọi hàm handleSearch đã được cập nhật đường dẫn
+        handleSearch();
       }, 1000);
     }
   };
@@ -507,7 +506,6 @@ const closeVoiceSearch = () => {
   voiceDialog.value = false;
 };
 
-// --- MENU VÀ USER LOGIC ---
 const closeMenu = () => {
   menuOpen.value = false;
 };
@@ -583,7 +581,6 @@ const logout = () => {
 onMounted(() => {
   checkUserStatus();
   window.addEventListener("storage", checkUserStatus);
-  // Đồng bộ searchKeyword với route query
   if (route.query.q) {
     searchKeyword.value = route.query.q;
   }

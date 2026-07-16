@@ -22,6 +22,20 @@
       >
         -{{ product.active_discount }}%
       </v-chip>
+
+      <!-- Nút Yêu thích trên Card -->
+      <v-btn
+        icon
+        size="small"
+        class="favorite-badge"
+        :color="isFavorite ? 'red-lighten-5' : 'white'"
+        elevation="2"
+        @click.prevent="toggleFavorite"
+      >
+        <v-icon :color="isFavorite ? 'red' : 'grey-darken-1'">
+          {{ isFavorite ? "mdi-heart" : "mdi-heart-outline" }}
+        </v-icon>
+      </v-btn>
     </div>
 
     <v-card-title
@@ -53,8 +67,18 @@
         </template>
       </div>
 
-      <div class="text-caption text-grey-darken-1 mt-1 text-center">
-        Danh mục: {{ product.category_name || "Đang cập nhật" }}
+      <!-- Thống kê Đã bán & Lượt thích -->
+      <div
+        class="text-caption text-grey-darken-2 mt-2 d-flex justify-space-between align-center px-2"
+      >
+        <span class="d-flex align-center">
+          <v-icon size="x-small" class="mr-1" color="red">mdi-heart</v-icon>
+          {{ favoriteCount }}
+        </span>
+        <span class="d-flex align-center">
+          <v-icon size="x-small" class="mr-1">mdi-shopping-outline</v-icon>
+          Đã bán: {{ product.sold_count || 0 }}
+        </span>
       </div>
     </v-card-text>
 
@@ -79,7 +103,8 @@
 </template>
 
 <script setup>
-import { defineProps, computed } from "vue";
+import { defineProps, computed, ref, watch } from "vue";
+import ProductService from "@/services/product.service";
 
 const props = defineProps({
   product: {
@@ -87,6 +112,45 @@ const props = defineProps({
     required: true,
   },
 });
+
+const isFavorite = ref(
+  props.product.is_favorite > 0 || props.product.is_favorite === true || false,
+);
+const favoriteCount = ref(props.product.favorite_count || 0);
+
+watch(
+  () => props.product,
+  (newVal) => {
+    isFavorite.value =
+      newVal.is_favorite > 0 || newVal.is_favorite === true || false;
+    favoriteCount.value = newVal.favorite_count || 0;
+  },
+  { deep: true },
+);
+
+const toggleFavorite = async () => {
+  const userStr = localStorage.getItem("user");
+  if (!userStr) {
+    alert("Vui lòng đăng nhập để thêm vào yêu thích!");
+    return;
+  }
+
+  // Tạm đổi state phía UI để mượt mà
+  isFavorite.value = !isFavorite.value;
+  favoriteCount.value += isFavorite.value ? 1 : -1;
+
+  // Gọi API Backend
+  try {
+    await ProductService.toggleFavorite({
+      product_id: props.product.id,
+    });
+  } catch (error) {
+    // Revert nếu lỗi
+    isFavorite.value = !isFavorite.value;
+    favoriteCount.value += isFavorite.value ? 1 : -1;
+    console.error("Lỗi khi cập nhật yêu thích:", error);
+  }
+};
 
 const originalPrice = computed(() => props.product.min_price || 0);
 
@@ -131,6 +195,13 @@ const formatPrice = (value) => {
   z-index: 2;
   font-size: 14px;
   padding: 4px 12px;
+}
+
+.favorite-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
 }
 
 .price-block {

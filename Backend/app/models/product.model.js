@@ -67,7 +67,18 @@ const Product = {
     }
   },
 
-  getAll: async (searchKeyword = "") => {
+  getAll: async (searchKeyword = "", userId = null) => {
+    const params = [];
+    let isFavoriteQuery = "0 as is_favorite";
+
+    // Nếu có truyền userId vào, ta check xem user đó đã thích SP này chưa
+    if (userId) {
+      // ĐÃ SỬA: Thêm "AS is_favorite" vào cuối
+      isFavoriteQuery =
+        "(SELECT COUNT(*) FROM favorites WHERE product_id = p.id AND user_id = ?) AS is_favorite";
+      params.push(userId);
+    }
+
     let query = `
       SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name,
              (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumbnail,
@@ -80,20 +91,27 @@ const Product = {
                ELSE 0
              END AS active_discount,
              (SELECT GROUP_CONCAT(DISTINCT UPPER(color)) FROM product_variants WHERE product_id = p.id) as colors,
-             (SELECT GROUP_CONCAT(DISTINCT UPPER(size)) FROM product_variants WHERE product_id = p.id) as sizes
+             (SELECT GROUP_CONCAT(DISTINCT UPPER(size)) FROM product_variants WHERE product_id = p.id) as sizes,
+             
+             -- ĐẾM SỐ LƯỢNG YÊU THÍCH TỔNG
+             (SELECT COUNT(*) FROM favorites WHERE product_id = p.id) as favorite_count,
+             
+             -- TÍNH SỐ LƯỢNG ĐÃ BÁN (Trừ đơn hàng bị hủy)
+             (SELECT IFNULL(SUM(quantity), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = p.id AND o.status != 'cancelled') as sold_count,
+             
+             -- CHECK XEM USER ĐANG ĐĂNG NHẬP CÓ THÍCH CHƯA
+             ${isFavoriteQuery}
+             
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN sports s ON c.sport_id = s.id
     `;
 
-    const params = [];
-
-    // NẾU CÓ TỪ KHÓA THÌ THÊM LỆNH WHERE LIKE VÀO SQL
     if (searchKeyword && searchKeyword.trim() !== "") {
       query += ` WHERE p.name LIKE ? OR p.description LIKE ? OR c.name LIKE ? OR s.name LIKE ?`;
       const keyword = `%${searchKeyword.trim()}%`;
-      params.push(keyword, keyword, keyword, keyword);
+      params.push(keyword, keyword, keyword, keyword); // Tham số tiếp theo
     }
 
     query += ` ORDER BY p.created_at DESC`;
@@ -102,27 +120,49 @@ const Product = {
     return rows;
   },
 
-  getById: async (id) => {
-    const [product] = await db.query(
-      `SELECT p.*, b.name as brand_name, 
-              c.name as category_name, c.parent_id,
-              pc.name as parent_category_name, 
-              s.name as sport_name,
-              CASE
-                WHEN p.discount_percent > 0
-                  AND (p.sale_start IS NULL OR p.sale_start <= NOW())
-                  AND (p.sale_end IS NULL OR p.sale_end >= NOW())
-                THEN p.discount_percent
-                ELSE 0
-              END AS active_discount
-       FROM products p
-       LEFT JOIN brands b ON p.brand_id = b.id
-       LEFT JOIN categories c ON p.category_id = c.id
-       LEFT JOIN categories pc ON c.parent_id = pc.id
-       LEFT JOIN sports s ON c.sport_id = s.id
-       WHERE p.id = ?`,
-      [id],
-    );
+  getById: async (id, userId = null) => {
+    const params = [];
+    let isFavoriteQuery = "0 as is_favorite";
+
+    if (userId) {
+      // ĐÃ SỬA: Thêm "AS is_favorite" vào cuối
+      isFavoriteQuery =
+        "(SELECT COUNT(*) FROM favorites WHERE product_id = p.id AND user_id = ?) AS is_favorite";
+      params.push(userId);
+    }
+    params.push(id); // Tham số tiếp theo cho WHERE p.id = ?
+
+    let query = `
+      SELECT p.*, b.name as brand_name, 
+             c.name as category_name, c.parent_id,
+             pc.name as parent_category_name, 
+             s.name as sport_name,
+             CASE
+               WHEN p.discount_percent > 0
+                 AND (p.sale_start IS NULL OR p.sale_start <= NOW())
+                 AND (p.sale_end IS NULL OR p.sale_end >= NOW())
+               THEN p.discount_percent
+               ELSE 0
+             END AS active_discount,
+
+             -- ĐẾM SỐ LƯỢNG YÊU THÍCH TỔNG
+             (SELECT COUNT(*) FROM favorites WHERE product_id = p.id) as favorite_count,
+             
+             -- TÍNH SỐ LƯỢNG ĐÃ BÁN
+             (SELECT IFNULL(SUM(quantity), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = p.id AND o.status != 'cancelled') as sold_count,
+             
+             -- CHECK XEM USER CÓ THÍCH CHƯA
+             ${isFavoriteQuery}
+
+      FROM products p
+      LEFT JOIN brands b ON p.brand_id = b.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN categories pc ON c.parent_id = pc.id
+      LEFT JOIN sports s ON c.sport_id = s.id
+      WHERE p.id = ?
+    `;
+
+    const [product] = await db.query(query, params);
     if (product.length === 0) return null;
 
     const [variants] = await db.query(
@@ -468,6 +508,56 @@ const Product = {
       JOIN products p ON pv.product_id = p.id
       ORDER BY p.name ASC
     `);
+    return rows;
+  },
+
+  // Hàm xử lý Thêm / Bỏ yêu thích sản phẩm (Chỉ cần User ID và Product ID)
+  toggleFavorite: async (userId, productId) => {
+    // Kiểm tra xem user đã thích sản phẩm này chưa
+    const [existing] = await db.query(
+      "SELECT id FROM favorites WHERE user_id = ? AND product_id = ?",
+      [userId, productId],
+    );
+
+    if (existing.length > 0) {
+      // Đã thích -> Tiến hành Xóa (Hủy thích)
+      await db.query("DELETE FROM favorites WHERE id = ?", [existing[0].id]);
+      return { is_favorite: false, message: "Đã bỏ yêu thích thành công" };
+    } else {
+      // Chưa thích -> Tiến hành Thêm
+      const favId = generateId();
+      await db.query(
+        "INSERT INTO favorites (id, user_id, product_id) VALUES (?, ?, ?)",
+        [favId, userId, productId],
+      );
+      return { is_favorite: true, message: "Đã thêm vào yêu thích thành công" };
+    }
+  },
+
+  // 2. Hàm lấy danh sách toàn bộ sản phẩm đã yêu thích của 1 User
+  getFavoritesByUser: async (userId) => {
+    // Tận dụng cấu trúc câu SQL đếm discount và lấy thumbnail từ hàm getAll() của bạn
+    const query = `
+      SELECT p.*, b.name as brand_name, c.name as category_name,
+             (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumbnail,
+             (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price,
+             CASE
+               WHEN p.discount_percent > 0
+                 AND (p.sale_start IS NULL OR p.sale_start <= NOW())
+                 AND (p.sale_end IS NULL OR p.sale_end >= NOW())
+               THEN p.discount_percent
+               ELSE 0
+             END AS active_discount,
+             1 as is_favorite, -- Vì lấy từ bảng favorites nên chắc chắn là đã thích
+             (SELECT COUNT(*) FROM favorites WHERE product_id = p.id) as favorite_count
+      FROM favorites f
+      JOIN products p ON f.product_id = p.id
+      LEFT JOIN brands b ON p.brand_id = b.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE f.user_id = ?
+      ORDER BY f.created_at DESC
+    `;
+    const [rows] = await db.query(query, [userId]);
     return rows;
   },
 };

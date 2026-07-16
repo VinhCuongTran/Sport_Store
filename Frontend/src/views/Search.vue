@@ -1,5 +1,7 @@
 <template>
   <div class="products-page bg-grey-lighten-5 py-8 min-vh-100">
+    <Loading :visible="isLoading" text="Đang phân tích hình ảnh..." />
+
     <v-container>
       <div class="mb-6 border-b pb-4 d-flex align-center gap-4">
         <v-icon color="red" size="32">
@@ -17,23 +19,7 @@
         </h2>
       </div>
 
-      <div v-if="isLoading" class="text-center py-12">
-        <v-progress-circular
-          indeterminate
-          size="64"
-          width="5"
-          color="black"
-          class="mb-6"
-        ></v-progress-circular>
-        <h3
-          class="text-h6 font-weight-regular text-grey-darken-3"
-          style="min-height: 32px"
-        >
-          {{ searchStepText }}
-        </h3>
-      </div>
-
-      <v-row v-else>
+      <v-row v-if="!isLoading">
         <v-col cols="12" md="3" class="d-none d-md-block">
           <div
             v-if="
@@ -150,6 +136,7 @@ import { ref, onMounted, computed, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
 import { useToast } from "vue-toastification";
+import { removeBackground } from "@imgly/background-removal"; // Đã được bọc {} ở câu hỏi trước
 
 // Components & Services
 import { searchState } from "@/services/search.service";
@@ -157,6 +144,7 @@ import CategoryService from "@/services/category.service";
 import BrandService from "@/services/brand.service";
 import ProductCard from "@/components/ProductCard.vue";
 import FilterSidebar from "@/components/Filter.vue";
+import Loading from "@/components/Loading.vue"; // Nhúng Component Loading của bạn
 
 const route = useRoute();
 const toast = useToast();
@@ -188,68 +176,75 @@ const sortOptions = [
   { title: "Giá: Cao đến Thấp", value: "price_desc" },
 ];
 
-// Tiến trình AI
-const searchSteps = [
-  "Đang tải ảnh lên...",
-  "Đang phân tích hình ảnh...",
-  "Đang so khớp với sản phẩm...",
-];
-const searchStepText = ref(searchSteps[0]);
-let searchStepInterval = null;
+// --- HÀM TỐI ƯU TỐC ĐỘ: Thu nhỏ ảnh gốc trước khi đưa vào AI (Giảm tải bộ nhớ) ---
+const compressImage = (file, maxSize = 512) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
 
-const startSearchSteps = () => {
-  let i = 0;
-  searchStepText.value = searchSteps[0];
-  searchStepInterval = setInterval(() => {
-    i = (i + 1) % searchSteps.length;
-    searchStepText.value = searchSteps[i];
-  }, 1200);
+        if (width > height) {
+          if (width > maxSize) {
+            height *= maxSize / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width *= maxSize / height;
+            height = maxSize;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            resolve(new File([blob], file.name, { type: "image/jpeg" }));
+          },
+          "image/jpeg",
+          0.8, // Nén chất lượng 80%
+        );
+      };
+    };
+  });
 };
 
-const stopSearchSteps = () => {
-  if (searchStepInterval) {
-    clearInterval(searchStepInterval);
-    searchStepInterval = null;
-  }
-};
-
-// Chuẩn hóa dữ liệu API trả về để ProductCard hiển thị đúng
+// Chuẩn hóa dữ liệu API
 const normalizeProductData = (p) => {
-  // Gắn đúng key ID
   p.id = p.id || p.product_id;
-
   if (p.matched_image) {
-    // 1. Lưu lại các trường gốc (nếu lỡ cần dùng)
-    p.original_image = p.image; 
+    p.original_image = p.image;
     p.original_images = p.images;
-    
-    // 2. Ép kiểu ảnh AI vào MỌI tên biến chuỗi thông dụng
-    p.image = p.matched_image; 
+    p.image = p.matched_image;
     p.image_url = p.matched_image;
     p.thumbnail = p.matched_image;
-    
-    // 3. Ép kiểu ảnh AI vào dạng MẢNG OBJECT (cấu trúc mà dự án bạn đang dùng)
     p.images = [
       {
         image_url: p.matched_image,
         is_thumbnail: 1,
-        is_thumbnail_true: true
-      }
+        is_thumbnail_true: true,
+      },
     ];
-    
-    // 4. Đề phòng trường hợp ProductCard tự parse JSON chuỗi
     try {
       p.images_json = JSON.stringify([{ image_url: p.matched_image }]);
     } catch (e) {}
   }
-  
   return p;
 };
 
 // Gọi API
 const executeSearch = async () => {
   const { q, type } = route.query;
-  page.value = 1; // Reset trang
+  page.value = 1;
 
   if (type === "image") {
     searchState.searchType = "image";
@@ -257,22 +252,63 @@ const executeSearch = async () => {
     if (!searchState.imageFile) return;
 
     try {
-      isLoading.value = true;
-      startSearchSteps();
+      isLoading.value = true; 
+
+      // 1. Nén ảnh xuống tối đa 512px
+      const compressedFile = await compressImage(searchState.imageFile, 512);
+
+      const aiConfig = {
+        // Trỏ về thư mục public/models/ của dự án (Tốc độ tải gần như tức thì)
+        //publicPath: window.location.origin + "/Models/",
+        model: "small" // Vẫn dùng model nhỏ nhẹ
+      };
+
+      // 2. Tách nền bằng AI VỚI CẤU HÌNH SIÊU TỐC
+      const transparentBlob = await removeBackground(compressedFile, aiConfig);
+
+      // 3. Đổ nền trắng vào Canvas
+      const img = new Image();
+      img.src = URL.createObjectURL(transparentBlob);
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+
+      // 4. Xuất ảnh JPEG sạch
+      const whiteBgBlob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.95)
+      );
+      const processedFile = new File([whiteBgBlob], "product-clean.jpg", {
+        type: "image/jpeg",
+      });
+
+      // Hiện ảnh lên màn hình cho khách xem
+      searchState.imagePreview = URL.createObjectURL(processedFile);
+
+      // 5. Gửi lên Server tìm kiếm
       const formData = new FormData();
-      formData.append("image", searchState.imageFile);
+      formData.append("image", processedFile);
 
       const response = await axios.post(
         "http://localhost:3000/api/search/image",
-        formData,
+        formData
       );
+      
       if (response.data.success) {
         searchState.results = response.data.products.map(normalizeProductData);
       }
     } catch (error) {
-      toast.error("Lỗi server hoặc không tìm thấy sản phẩm.");
+      toast.error("Lỗi xử lý ảnh hoặc không tìm thấy sản phẩm.");
+      console.error(error);
     } finally {
-      stopSearchSteps();
       isLoading.value = false;
       searchState.isNewImageUpload = false;
     }
@@ -297,13 +333,12 @@ const executeSearch = async () => {
     }
   }
 
-  // Tự động set max price theo kết quả trả về
   nextTick(() => {
     priceRange.value = [0, maxPriceLimit.value];
   });
 };
 
-// --- LOGIC LỌC (Tương tự Products.vue) ---
+// --- LOGIC LỌC & GIAO DIỆN (Giữ nguyên) ---
 const getMinPrice = (product) =>
   Number(product.min_price) || Number(product.price) || 0;
 
@@ -332,7 +367,6 @@ const getProductsForFilter = (excludeFilter = null) => {
   return result;
 };
 
-// Tính toán dải giá
 const maxPriceLimit = computed(() => {
   const validProducts = getProductsForFilter("price");
   if (validProducts.length === 0) return 10000000;
@@ -352,7 +386,6 @@ watch(maxPriceLimit, (newMax, oldMax) => {
   priceRange.value = newRange;
 });
 
-// Computed cho Sidebar Options
 const availableCategories = computed(() => {
   const validProducts = getProductsForFilter("category");
   const activeIds = [
@@ -386,7 +419,6 @@ const hasActiveSidebarFilters = computed(() => {
   );
 });
 
-// Chips
 const activeFilterChips = computed(() => {
   const chips = [];
   filterCategories.value.forEach((id) => {
@@ -427,7 +459,6 @@ const clearFilters = () => {
   nextTick(() => (priceRange.value = [0, maxPriceLimit.value]));
 };
 
-// Lọc kết quả cuối cùng + Sort
 const filteredProducts = computed(() => {
   let result = getProductsForFilter(null);
   if (sortOrder.value === "price_asc") {
@@ -438,15 +469,10 @@ const filteredProducts = computed(() => {
     result.sort(
       (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0),
     );
-  } else {
-    // "popular" sẽ ưu tiên giữ nguyên thứ tự ban đầu từ AI / Backend (theo độ chính xác điểm số)
-    // Hoặc kết hợp thêm điểm bán chạy/đánh giá
-    // Ở đây ta dùng hàm chuẩn của bạn
   }
   return result;
 });
 
-// Phân trang
 const totalPages = computed(() =>
   Math.ceil(filteredProducts.value.length / itemsPerPage),
 );
@@ -457,9 +483,7 @@ const paginatedProducts = computed(() => {
 
 const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-// Khởi tạo
 onMounted(async () => {
-  // Lấy danh sách Categories và Brands để bộ lọc có thể hiển thị Tên
   try {
     const [catRes, brandRes] = await Promise.all([
       CategoryService.getAll(),
@@ -473,7 +497,16 @@ onMounted(async () => {
   await executeSearch();
 });
 
-watch(() => route.query, executeSearch);
+watch(() => route.query, executeSearch, { deep: true });
+
+watch(
+  () => searchState.isNewImageUpload,
+  (isNew) => {
+    if (isNew && searchState.imageFile) {
+      executeSearch();
+    }
+  },
+);
 </script>
 
 <style scoped>

@@ -71,4 +71,16 @@ router.post(
   productController.importStock,
 );
 
+router.post(
+  "/favorite/toggle",
+  verifyToken,
+  productController.toggleFavorite,
+);
+
+router.get(
+  "/favorite/list",
+  verifyToken,
+  productController.getFavoriteProducts,
+);
+
 module.exports = router;

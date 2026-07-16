@@ -141,6 +141,12 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
+        path: "favorites",
+        name: "favorites",
+        component: () => import("../views/Favorite.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
         path: "/:pathMatch(.*)*",
         name: "notfound",
         component: () => import("../views/NotFound.vue"),

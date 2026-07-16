@@ -2,6 +2,8 @@ const ProductModel = require("../models/product.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
 const { getImageEmbeddingFromUrl } = require("../utils/embedding.util");
+const jwt = require("jsonwebtoken");
+const config = require("../config");
 
 const cloudinary = require("cloudinary").v2;
 
@@ -94,16 +96,42 @@ const Product = {
   }),
 
   findAll: asyncHandler(async (req, res) => {
-    // 1. Bắt lấy từ khóa tìm kiếm mà frontend gửi lên
     const searchKeyword = req.query.search || "";
 
-    // 2. Truyền từ khóa đó vào model
-    const data = await ProductModel.getAll(searchKeyword);
+    // KỸ THUẬT LẤY USER ID NGẦM (Không chặn lỗi nếu khách vãng lai)
+    let userId = null;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      try {
+        const token = req.headers.authorization.split(" ")[1];
+        const decoded = jwt.verify(token, config.jwt.secret);
+        userId = decoded.id; // Nếu token hợp lệ, lấy id của khách hàng
+      } catch (error) {
+        // Token lỗi hoặc hết hạn thì bỏ qua, coi như khách vãng lai
+      }
+    }
+
+    const data = await ProductModel.getAll(searchKeyword, userId);
     res.json(data);
   }),
 
   findOne: asyncHandler(async (req, res) => {
-    const data = await ProductModel.getById(req.params.id);
+    // KỸ THUẬT LẤY USER ID NGẦM
+    let userId = null;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      try {
+        const token = req.headers.authorization.split(" ")[1];
+        const decoded = jwt.verify(token, config.jwt.secret);
+        userId = decoded.id;
+      } catch (error) {}
+    }
+
+    const data = await ProductModel.getById(req.params.id, userId);
     if (!data) {
       throw new ApiError(404, "Không tìm thấy sản phẩm");
     }
@@ -240,7 +268,6 @@ const Product = {
 
     res.json({ message: "Lưu phiếu nhập kho thành công" });
   }),
-  
 
   getAllVariants: asyncHandler(async (req, res) => {
     const data = await ProductModel.getAllVariants();
@@ -261,7 +288,7 @@ const Product = {
   }),
 
   createStockTicket: asyncHandler(async (req, res) => {
-    const staffId = req.user.id; 
+    const staffId = req.user.id;
     const ticketData = req.body;
 
     if (!ticketData.items || ticketData.items.length === 0) {
@@ -269,8 +296,29 @@ const Product = {
     }
 
     const ticketId = await ProductModel.createStockTicket(staffId, ticketData);
-    res.status(201).json({ message: "Lưu phiếu kiểm kho thành công", ticketId });
-  })
+    res
+      .status(201)
+      .json({ message: "Lưu phiếu kiểm kho thành công", ticketId });
+  }),
+
+  toggleFavorite: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const { product_id } = req.body; // Bỏ variant_id ở đây
+
+    if (!product_id) {
+      throw new ApiError(400, "Không tìm thấy thông tin sản phẩm (product_id)");
+    }
+
+    // Truyền duy nhất 2 tham số
+    const result = await ProductModel.toggleFavorite(userId, product_id);
+    res.json(result);
+  }),
+
+  getFavoriteProducts: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const data = await ProductModel.getFavoritesByUser(userId);
+    res.json(data);
+  }),
 };
 
 module.exports = Product;

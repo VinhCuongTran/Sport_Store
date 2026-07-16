@@ -105,21 +105,48 @@
               {{ product.name }}
             </h1>
 
-            <div
-              class="d-flex align-center gap-2 mb-2"
-              v-if="reviews.length > 0"
-            >
-              <v-rating
-                :model-value="averageRating"
-                color="warning"
-                density="compact"
-                size="small"
-                readonly
-                half-increments
-              ></v-rating>
-              <span class="text-body-2 text-grey-darken-1"
-                >({{ reviews.length }} đánh giá)</span
+            <div class="d-flex align-center flex-wrap gap-3 mb-4">
+              <div v-if="reviews.length > 0" class="d-flex align-center gap-1">
+                <v-rating
+                  :model-value="averageRating"
+                  color="warning"
+                  density="compact"
+                  size="small"
+                  readonly
+                  half-increments
+                ></v-rating>
+                <span class="text-body-2 text-grey-darken-1"
+                  >({{ reviews.length }})</span
+                >
+              </div>
+
+              <span class="text-grey-lighten-1" v-if="reviews.length > 0"
+                >|</span
               >
+
+              <div
+                class="d-flex align-center gap-1 text-body-2 text-grey-darken-2"
+              >
+                <v-icon size="small" color="red">mdi-heart</v-icon>
+                <span
+                  >Đã thích:
+                  <strong class="text-black">{{ favoriteCount }}</strong></span
+                >
+              </div>
+
+              <span class="text-grey-lighten-1">|</span>
+
+              <div
+                class="d-flex align-center gap-1 text-body-2 text-grey-darken-2"
+              >
+                <v-icon size="small">mdi-shopping-outline</v-icon>
+                <span
+                  >Đã bán:
+                  <strong class="text-black">{{
+                    product.sold_count || 0
+                  }}</strong></span
+                >
+              </div>
             </div>
 
             <div class="price-block mb-6 d-flex flex-column align-start">
@@ -339,6 +366,7 @@
                 MUA NGAY
               </v-btn>
 
+              <!-- Nút Chat -->
               <v-btn
                 variant="outlined"
                 color="black"
@@ -351,7 +379,24 @@
               >
                 <v-icon>mdi-chat-processing-outline</v-icon>
               </v-btn>
+
+              <!-- Nút Yêu Thích trong trang chi tiết -->
+              <v-btn
+                variant="outlined"
+                :color="isFavorite ? 'red' : 'black'"
+                height="54"
+                width="54"
+                rounded="0"
+                class="flex-shrink-0"
+                @click="toggleFavoriteDetail"
+                :title="isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'"
+              >
+                <v-icon :color="isFavorite ? 'red' : ''">
+                  {{ isFavorite ? "mdi-heart" : "mdi-heart-outline" }}
+                </v-icon>
+              </v-btn>
             </div>
+
             <div
               class="promotion-box border pa-4 mt-6 text-body-2"
               style="line-height: 1.8"
@@ -839,6 +884,10 @@ const isAddingToCart = ref(false);
 const product = ref(null);
 const quantity = ref(1);
 
+// TRẠNG THÁI YÊU THÍCH
+const isFavorite = ref(false);
+const favoriteCount = ref(0);
+
 const availableVouchers = computed(() => {
   const vouchers = product.value?.available_vouchers || [];
   return vouchers.filter((v) => {
@@ -1001,9 +1050,13 @@ const fetchProductDetail = async () => {
     if (data.status !== "active") throw new Error("Sản phẩm không khả dụng");
     product.value = data;
 
+    // Gán dữ liệu Yêu thích
+    isFavorite.value =
+      data.is_favorite > 0 || data.is_favorite === true || false;
+    favoriteCount.value = data.favorite_count || 0;
+
     let targetColor = null;
 
-    // 1. Kiểm tra nếu khách hàng đi từ trang tìm kiếm hình ảnh
     if (searchState.searchType === "image" && searchState.results.length > 0) {
       const matchedAIProduct = searchState.results.find(
         (item) => item.id === route.params.id,
@@ -1011,7 +1064,6 @@ const fetchProductDetail = async () => {
 
       if (matchedAIProduct && matchedAIProduct.matched_image) {
         const targetUrl = matchedAIProduct.matched_image.trim();
-        // Tìm ảnh khớp (sử dụng includes để tránh sai số đường dẫn tuyệt đối/tương đối)
         const matchedImg = productImages.value.find((img) => {
           const imgUrl = (img.image_url || img.url || img || "").trim();
           return (
@@ -1027,7 +1079,6 @@ const fetchProductDetail = async () => {
       }
     }
 
-    // 2. Khớp nối siêu chuẩn xác (Bỏ qua viết hoa, viết thường, khoảng trắng thừa)
     let finalColorToSelect = null;
     if (targetColor && uniqueColors.value.length > 0) {
       finalColorToSelect = uniqueColors.value.find(
@@ -1035,16 +1086,13 @@ const fetchProductDetail = async () => {
       );
     }
 
-    // 3. Nếu AI không tìm được màu (hoặc đi từ trang Home), tự động chọn màu đầu tiên
     if (!finalColorToSelect && uniqueColors.value.length > 0) {
       finalColorToSelect = uniqueColors.value[0];
     }
 
-    // 4. Kích hoạt chọn màu (Hành động này sẽ mở khóa danh sách Size bên dưới)
     if (finalColorToSelect) {
       selectColor(finalColorToSelect);
     } else {
-      // Dự phòng cho các sản phẩm không có biến thể màu nào
       const sortedImages = [...productImages.value].sort((a, b) => {
         const isThumbA = a.is_thumbnail == 1 || a.is_thumbnail === true ? 1 : 0;
         const isThumbB = b.is_thumbnail == 1 || b.is_thumbnail === true ? 1 : 0;
@@ -1159,6 +1207,32 @@ const showMessage = (text, color = "success") => {
   snackbar.value = { show: true, text, color };
 };
 
+const toggleFavoriteDetail = async () => {
+  const userStr = localStorage.getItem("user");
+  if (!userStr) {
+    showMessage("Vui lòng đăng nhập để yêu thích", "error");
+    setTimeout(() => router.push("/login"), 1500);
+    return;
+  }
+
+  isFavorite.value = !isFavorite.value;
+  favoriteCount.value += isFavorite.value ? 1 : -1;
+  showMessage(
+    isFavorite.value ? "Đã lưu vào danh sách Yêu thích!" : "Đã bỏ yêu thích",
+  );
+
+  try {
+    // Chỉ gửi mỗi product_id lên Backend
+    await ProductService.toggleFavorite({
+      product_id: product.value.id,
+    });
+  } catch (e) {
+    isFavorite.value = !isFavorite.value;
+    favoriteCount.value += isFavorite.value ? 1 : -1;
+    showMessage("Có lỗi xảy ra, vui lòng thử lại!", "error");
+  }
+};
+
 const addToCart = async () => {
   const userStr = localStorage.getItem("user");
   if (!userStr) {
@@ -1229,10 +1303,11 @@ const buyNow = () => {
     return;
   }
 
-  // Tính toán giá cuối cùng (đã trừ khuyến mãi nếu có)
-  const finalPrice = product.value.active_discount > 0 ? discountedPrice.value : currentOriginalPrice.value;
+  const finalPrice =
+    product.value.active_discount > 0
+      ? discountedPrice.value
+      : currentOriginalPrice.value;
 
-  // Tạo object sản phẩm với cấu trúc mà trang Checkout đang mong đợi
   const checkoutItem = {
     product_id: product.value.id,
     variant_id: selectedVariant.value.id,
@@ -1241,16 +1316,12 @@ const buyNow = () => {
     size: selectedSize.value,
     variant_price: finalPrice,
     quantity: quantity.value,
-    thumbnail: currentGallery.value[0] || 'https://placehold.co/600x600?text=No+Image'
+    thumbnail:
+      currentGallery.value[0] || "https://placehold.co/600x600?text=No+Image",
   };
 
-  // Lưu vào sessionStorage để truyền sang trang thanh toán
   sessionStorage.setItem("checkout_items", JSON.stringify([checkoutItem]));
-  
-  // Đánh dấu đây là đơn "Mua ngay", không phải từ Giỏ hàng
-  sessionStorage.setItem("is_from_cart", "false"); 
-
-  // Chuyển hướng
+  sessionStorage.setItem("is_from_cart", "false");
   router.push("/checkout");
 };
 
