@@ -11,11 +11,13 @@
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
     "@mdi/font": "^7.4.47",
+    "apexcharts": "^5.16.0",
     "axios": "^1.13.6",
     "socket.io-client": "^4.8.3",
     "vue": "^3.5.29",
     "vue-router": "^5.0.3",
     "vue-toastification": "^2.0.0-rc.5",
+    "vue3-apexcharts": "^1.11.1",
     "vuetify": "^4.0.1",
     "xlsx": "^0.18.5"
   },
