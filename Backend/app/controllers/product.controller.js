@@ -4,6 +4,7 @@ const asyncHandler = require("../utils/async.handler");
 const { getImageEmbeddingFromUrl } = require("../utils/embedding.util");
 const jwt = require("jsonwebtoken");
 const config = require("../config");
+const ActivityLog = require("../models/activity_log.model");
 
 const cloudinary = require("cloudinary").v2;
 
@@ -88,6 +89,7 @@ const Product = {
     }
 
     const productId = await ProductModel.create(productData, variants, images);
+    await ActivityLog.logAction(req.user.id, 'CREATE_PRODUCT', `Đã thêm sản phẩm mới`, productId);
     res.status(201).json({
       message: "Tạo sản phẩm thành công",
       productId,
@@ -213,6 +215,7 @@ const Product = {
     if (!success) {
       throw new ApiError(404, "Cập nhật thất bại hoặc không tìm thấy sản phẩm");
     }
+    await ActivityLog.logAction(req.user.id, 'UPDATE_PRODUCT', `Đã cập nhật thông tin sản phẩm`, req.params.id);
     res.json({ message: "Cập nhật thành công" });
   }),
 
@@ -240,7 +243,7 @@ const Product = {
     if (!success) {
       throw new ApiError(500, "Lỗi khi xóa sản phẩm khỏi cơ sở dữ liệu");
     }
-
+    await ActivityLog.logAction(req.user.id, 'DELETE_PRODUCT', `Đã xóa sản phẩm`, productId);
     res.json({
       message: "Đã xóa sản phẩm và dọn sạch hình ảnh thành công",
     });
@@ -296,6 +299,7 @@ const Product = {
     }
 
     const ticketId = await ProductModel.createStockTicket(staffId, ticketData);
+    await ActivityLog.logAction(staffId, 'CREATE_STOCK_TICKET', `Đã tạo phiếu nhập kho mới`, ticketId);
     res
       .status(201)
       .json({ message: "Lưu phiếu kiểm kho thành công", ticketId });

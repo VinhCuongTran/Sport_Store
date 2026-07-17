@@ -1,12 +1,14 @@
 const BrandModel = require("../models/brand.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const ActivityLog = require("../models/activity_log.model");
 
 const BrandController = {
   create: asyncHandler(async (req, res) => {
     const data = req.body;
     if (req.file) data.logo_url = req.file.path;
     const id = await BrandModel.create(data);
+    await ActivityLog.logAction(req.user.id, 'CREATE_BRAND', `Đã tạo thương hiệu mới`, id);
     res.status(201).json({
       message: "Tạo thương hiệu thành công",
       id,
@@ -39,6 +41,7 @@ const BrandController = {
     if (!isUpdated) {
       throw new ApiError(404, "Không tìm thấy thương hiệu để cập nhật");
     }
+    await ActivityLog.logAction(req.user.id, 'UPDATE_BRAND', `Đã cập nhật thương hiệu`, req.params.id);
     res.json({ message: "Cập nhật thương hiệu thành công" });
   }),
 
@@ -47,6 +50,7 @@ const BrandController = {
     if (!isDeleted) {
       throw new ApiError(404, "Không tìm thấy thương hiệu để xóa");
     }
+    await ActivityLog.logAction(req.user.id, 'DELETE_BRAND', `Đã xóa thương hiệu`, req.params.id);
     res.json({ message: "Xóa thương hiệu thành công" });
   }),
 };

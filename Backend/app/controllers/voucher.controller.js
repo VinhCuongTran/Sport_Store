@@ -1,11 +1,13 @@
 const VoucherModel = require("../models/voucher.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const ActivityLog = require("../models/activity_log.model");
 
 const VoucherController = {
   create: asyncHandler(async (req, res) => {
     try {
       const id = await VoucherModel.create(req.body);
+      await ActivityLog.logAction(req.user.id, 'CREATE_VOUCHER', `Đã tạo voucher mới`, id);
       res.status(201).json({ message: "Tạo voucher thành công", id });
     } catch (error) {
       if (error.code === "ER_DUP_ENTRY") {
@@ -31,6 +33,7 @@ const VoucherController = {
       const isUpdated = await VoucherModel.update(req.params.id, req.body);
       if (!isUpdated)
         throw new ApiError(404, "Không tìm thấy voucher để cập nhật");
+      await ActivityLog.logAction(req.user.id, 'UPDATE_VOUCHER', `Đã cập nhật voucher`, req.params.id);
       res.json({ message: "Cập nhật voucher thành công" });
     } catch (error) {
       if (error.code === "ER_DUP_ENTRY") {
@@ -43,6 +46,7 @@ const VoucherController = {
   delete: asyncHandler(async (req, res) => {
     const isDeleted = await VoucherModel.delete(req.params.id);
     if (!isDeleted) throw new ApiError(404, "Không tìm thấy voucher để xóa");
+    await ActivityLog.logAction(req.user.id, 'DELETE_VOUCHER', `Đã xóa voucher`, req.params.id);
     res.json({ message: "Xóa voucher thành công" });
   }),
 

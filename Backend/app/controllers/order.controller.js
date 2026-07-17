@@ -6,6 +6,7 @@ const db = require("../utils/mysql.db");
 const NotificationModel = require("../models/notification.model");
 const { sendRealTimeNotification } = require("../../server");
 const generateId = require("../utils/generate.id");
+const ActivityLog = require("../models/activity_log.model");
 const {
   sendOrderConfirmation,
   sendOrderStatusUpdate,
@@ -289,6 +290,17 @@ const OrderController = {
       payment_status,
       staff_id,
     );
+    if (isUpdated) {
+      let actionName = 'UPDATE_ORDER';
+      if (status === 'cancelled') actionName = 'CANCEL_ORDER';
+      
+      await ActivityLog.logAction(
+        staff_id, 
+        actionName, 
+        `Đã chuyển trạng thái đơn hàng #${orderId} thành ${status}`, 
+        orderId
+      );
+    }
 
     if (!isUpdated)
       throw new ApiError(404, "Không tìm thấy đơn hàng để cập nhật");

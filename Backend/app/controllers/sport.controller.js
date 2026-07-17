@@ -1,10 +1,12 @@
 const SportModel = require("../models/sport.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const ActivityLog = require("../models/activity_log.model");
 
 const SportController = {
   create: asyncHandler(async (req, res) => {
     const id = await SportModel.create(req.body);
+    await ActivityLog.logAction(req.user.id, 'CREATE_SPORT', `Đã tạo môn thể thao mới`, id);
     res.status(201).json({ message: "Tạo môn thể thao thành công", id });
   }),
 
@@ -32,6 +34,7 @@ const SportController = {
       data.name = existingSport.name;
     }
     await SportModel.update(sportId, data);
+    await ActivityLog.logAction(req.user.id, 'UPDATE_SPORT', `Đã cập nhật môn thể thao`, sportId);
     res.json({ message: "Cập nhật môn thể thao thành công" });
   }),
 
@@ -40,6 +43,7 @@ const SportController = {
     if (!isDeleted) {
       throw new ApiError(404, "Không tìm thấy môn thể thao để xóa");
     }
+    await ActivityLog.logAction(req.user.id, 'DELETE_SPORT', `Đã xóa môn thể thao`, req.params.id);
     res.json({ message: "Xóa môn thể thao thành công" });
   }),
 };

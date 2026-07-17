@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const UserModel = require("../models/user.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const ActivityLog = require("../models/activity_log.model");
 
 const UserController = {
   findAll: asyncHandler(async (req, res) => {
@@ -18,6 +19,7 @@ const UserController = {
   delete: asyncHandler(async (req, res) => {
     const isDeleted = await UserModel.delete(req.params.id);
     if (!isDeleted) throw new ApiError(404, "Không tìm thấy người dùng để xóa");
+    await ActivityLog.logAction(req.user.id, 'DELETE_USER', `Đã xóa người dùng`, req.params.id);
     res.json({ message: "Xóa người dùng thành công" });
   }),
 
@@ -56,6 +58,7 @@ const UserController = {
         message: "Cập nhật người dùng thành công",
         avatar: data.avatar || "Giữ nguyên ảnh cũ",
       });
+      await ActivityLog.logAction(req.user.id, 'UPDATE_USER', `Đã cập nhật người dùng`, req.params.id);
     } catch (error) {
       if (error.code === "ER_DUP_ENTRY") {
         throw new ApiError(

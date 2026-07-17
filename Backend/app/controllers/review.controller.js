@@ -1,6 +1,7 @@
 const ReviewModel = require("../models/review.model");
 const ApiError = require("../utils/api.error");
 const asyncHandler = require("../utils/async.handler");
+const ActivityLog = require("../models/activity_log.model");
 
 const ReviewController = {
   create: asyncHandler(async (req, res) => {
@@ -50,6 +51,7 @@ const ReviewController = {
     if (!isDeleted) {
       throw new ApiError(404, "Không tìm thấy đánh giá để xóa");
     }
+    await ActivityLog.logAction(req.user.id, 'DELETE_REVIEW', `Đã xóa đánh giá`, req.params.id);
     res.json({ message: "Xóa đánh giá thành công" });
   }),
 };
