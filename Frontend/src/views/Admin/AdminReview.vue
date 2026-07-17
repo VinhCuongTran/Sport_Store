@@ -9,27 +9,22 @@
 
     <div class="d-flex justify-space-between align-center w-100 mb-6">
       <div>
-        <h2
-          class="text-h5 font-weight-bold text-indigo-darken-4"
-          style="line-height: 1.2"
-        >
-          Quản lý Đánh giá
+        <h2 class="text-h5 font-weight-bold text-indigo-darken-4">
+          Quản lý Đánh giá & Kiểm duyệt AI
         </h2>
         <span class="text-caption text-indigo-darken-4"
-          >Kiểm duyệt và quản lý phản hồi từ khách hàng</span
+          >Kiểm duyệt các phản hồi bị AI nghi ngờ vi phạm hoặc bị khách hàng báo
+          cáo</span
         >
       </div>
       <v-btn
         color="indigo-darken-4"
         prepend-icon="mdi-refresh"
         rounded="lg"
-        elevation="0"
-        class="text-capitalize font-weight-semibold"
         @click="fetchReviews"
         :loading="isLoading"
+        >Làm Mới</v-btn
       >
-        Làm Mới
-      </v-btn>
     </div>
 
     <v-card
@@ -37,54 +32,40 @@
       width="100%"
       elevation="0"
       rounded="xl"
-      class="pa-4"
-      style="
-        border: 1px solid rgba(99, 102, 241, 0.15);
-        box-shadow: 0 4px 24px rgba(99, 102, 241, 0.1);
-      "
+      class="pa-4 border"
     >
-      <div class="d-flex align-center gap-3 mb-4 px-2">
-        <v-text-field
-          v-model="search"
-          density="compact"
-          variant="outlined"
-          placeholder="Tìm người dùng, sản phẩm..."
-          prepend-inner-icon="mdi-magnify"
-          hide-details
-          clearable
-          rounded="lg"
-          color="indigo-darken-3"
-          style="max-width: 320px"
-        />
-        <v-spacer />
-        <v-chip
-          color="indigo-lighten-4"
-          text-color="indigo-darken-4"
-          size="small"
-          variant="flat"
-          prepend-icon="mdi-comment-multiple-outline"
-        >
-          {{ reviews.length }} đánh giá
-        </v-chip>
-      </div>
-
-      <v-divider class="mb-2" />
+      <v-tabs v-model="activeTab" color="indigo-darken-4" class="mb-4">
+        <v-tab value="all">Tất cả</v-tab>
+        <v-tab value="pending">
+          <v-badge
+            color="orange"
+            :content="pendingCount"
+            :model-value="pendingCount > 0"
+            floating
+          >
+            <v-icon start>mdi-robot-outline</v-icon> AI Bắt Lỗi
+          </v-badge>
+        </v-tab>
+        <v-tab value="reported">
+          <v-badge
+            color="red"
+            :content="reportedCount"
+            :model-value="reportedCount > 0"
+            floating
+          >
+            <v-icon start>mdi-flag-triangle</v-icon> Bị Báo Cáo
+          </v-badge>
+        </v-tab>
+      </v-tabs>
 
       <v-data-table
         :headers="headers"
-        :items="reviews"
+        :items="filteredReviews"
         :search="search"
         :loading="isLoading"
         hover
         class="bg-white rounded-lg"
-        no-data-text="Chưa có đánh giá nào"
       >
-        <template v-slot:item.id="{ item }">
-          <span class="font-weight-black text-indigo-darken-4"
-            >#{{ item.id }}</span
-          >
-        </template>
-
         <template v-slot:item.product_name="{ item }">
           <span class="text-body-2 font-weight-medium text-indigo-darken-3">{{
             item.product_name
@@ -98,62 +79,68 @@
             density="compact"
             size="small"
             readonly
-            half-increments
           ></v-rating>
         </template>
 
-        <template v-slot:item.comment="{ item }">
-          <span
-            class="text-body-2 text-grey-darken-3"
-            style="white-space: pre-wrap"
-            >{{ item.comment }}</span
+        <template v-slot:item.status="{ item }">
+          <v-chip
+            size="small"
+            variant="flat"
+            class="font-weight-bold"
+            :color="getStatusColor(item.status)"
           >
-        </template>
-
-        <template v-slot:item.created_at="{ item }">
-          <span class="text-body-2 text-black">{{
-            formatDate(item.created_at)
-          }}</span>
+            {{ getStatusText(item.status) }}
+          </v-chip>
         </template>
 
         <template v-slot:item.actions="{ item }">
-          <v-btn
-            v-if="isSuperAdmin"
-            color="red-darken-1"
-            size="small"
-            rounded="lg"
-            prepend-icon="mdi-delete"
-            variant="tonal"
-            class="text-capitalize"
-            @click="handleDelete(item)"
-          >
-            Xóa
-          </v-btn>
+          <div class="d-flex gap-2 justify-center">
+            <v-btn
+              v-if="['pending', 'reported'].includes(item.status)"
+              color="success"
+              size="small"
+              variant="tonal"
+              prepend-icon="mdi-check"
+              @click="changeStatus(item.id, 'approved')"
+              >Duyệt</v-btn
+            >
+            <v-btn
+              v-if="['approved', 'pending', 'reported'].includes(item.status)"
+              color="warning"
+              size="small"
+              variant="tonal"
+              prepend-icon="mdi-eye-off"
+              @click="changeStatus(item.id, 'rejected')"
+              >Từ chối</v-btn
+            >
+            <v-btn
+              v-if="isSuperAdmin"
+              color="red-darken-1"
+              size="small"
+              variant="tonal"
+              icon="mdi-delete"
+              @click="handleDelete(item)"
+            ></v-btn>
+          </div>
         </template>
       </v-data-table>
     </v-card>
-
     <ConfirmDialog ref="confirmDialog" />
-
     <v-snackbar
       v-model="snackbar.show"
       :color="snackbar.color"
       timeout="3000"
       location="top right"
+      >{{ snackbar.text }}</v-snackbar
     >
-      <div class="d-flex align-center gap-2">
-        <v-icon size="18">{{
-          snackbar.color === "success" ? "mdi-check-circle" : "mdi-alert-circle"
-        }}</v-icon>
-        {{ snackbar.text }}
-      </div>
-    </v-snackbar>
   </v-container>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import ReviewService from "@/services/review.service";
+// Nếu bạn chưa viết ReviewService.updateStatus trong Frontend, hãy import api.service:
+import api from "@/services/api.service";
 import Loading from "@/components/Loading.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import AuthService from "@/services/auth.service";
@@ -162,22 +149,34 @@ const isSuperAdmin = computed(() => AuthService.isSuperAdmin());
 const reviews = ref([]);
 const isLoading = ref(false);
 const search = ref("");
+const activeTab = ref("all");
 const confirmDialog = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
 
+const pendingCount = computed(
+  () => reviews.value.filter((r) => r.status === "pending").length,
+);
+const reportedCount = computed(
+  () => reviews.value.filter((r) => r.status === "reported").length,
+);
+
+const filteredReviews = computed(() => {
+  if (activeTab.value === "all") return reviews.value;
+  return reviews.value.filter((r) => r.status === activeTab.value);
+});
+
 const headers = [
-  { title: "ID", key: "id", width: "80px", align: "center" },
-  { title: "Khách hàng", key: "user", align: "start" },
+  { title: "KH", key: "user", align: "start" },
   { title: "Sản phẩm", key: "product_name", align: "start" },
-  { title: "Đánh giá", key: "rating", align: "center", width: "130px" },
+  { title: "Đánh giá", key: "rating", align: "center", width: "110px" },
   { title: "Nội dung", key: "comment", align: "start", sortable: false },
-  { title: "Ngày đăng", key: "created_at", align: "center", width: "160px" },
+  { title: "Trạng thái", key: "status", align: "center", width: "120px" },
   {
     title: "Thao tác",
     key: "actions",
     sortable: false,
     align: "center",
-    width: "120px",
+    width: "230px",
   },
 ];
 
@@ -185,57 +184,65 @@ const showMessage = (text, color = "success") => {
   snackbar.value = { show: true, text, color };
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
-  const d = new Date(dateString);
-  return (
-    d.toLocaleDateString("vi-VN") +
-    " " +
-    d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
-  );
+const getStatusColor = (status) => {
+  const map = {
+    approved: "success",
+    pending: "orange-darken-3",
+    reported: "red-darken-3",
+    rejected: "grey-darken-2",
+  };
+  return map[status] || "grey";
+};
+
+const getStatusText = (status) => {
+  const map = {
+    approved: "Hợp lệ",
+    pending: "AI Tạm Ẩn",
+    reported: "Bị Báo Cáo",
+    rejected: "Đã Ẩn",
+  };
+  return map[status] || status;
 };
 
 const fetchReviews = async () => {
   isLoading.value = true;
   try {
     const res = await ReviewService.getAll();
-    reviews.value = res.map((r) => ({
-      ...r,
-      user: `${r.user_name || ""} ${r.user_email || ""}`,
-    }));
+    reviews.value = res.map((r) => ({ ...r, user: r.user_name }));
   } catch (error) {
-    showMessage("Lỗi khi tải dữ liệu đánh giá", "error");
+    showMessage("Lỗi tải dữ liệu", "error");
   } finally {
     isLoading.value = false;
+  }
+};
+
+const changeStatus = async (id, status) => {
+  try {
+    // Tự gọi API nếu chưa định nghĩa trong Service
+    await api.patch(`/reviews/${id}/status`, { status });
+    showMessage("Cập nhật trạng thái thành công");
+    fetchReviews();
+  } catch (error) {
+    showMessage("Lỗi cập nhật", "error");
   }
 };
 
 const handleDelete = async (item) => {
   const isConfirmed = await confirmDialog.value.open(
-    "Xóa Đánh Giá",
-    `Bạn có chắc chắn muốn xóa đánh giá của khách hàng "${item.user_name || "Khách"}" cho sản phẩm "${item.product_name}"? Hành động này không thể hoàn tác.`,
+    "Xóa",
+    `Xóa đánh giá này?`,
   );
-
   if (!isConfirmed) return;
-
-  isLoading.value = true;
   try {
     await ReviewService.delete(item.id);
-    showMessage("Đã xóa đánh giá thành công");
-    await fetchReviews();
+    showMessage("Đã xóa");
+    fetchReviews();
   } catch (error) {
-    showMessage(
-      error.response?.data?.message || "Không thể xóa đánh giá",
-      "error",
-    );
-  } finally {
-    isLoading.value = false;
+    showMessage("Lỗi xóa", "error");
   }
 };
 
-onMounted(() => {
-  fetchReviews();
-});
+onMounted(() => fetchReviews());
 </script>
 
 <style scoped>

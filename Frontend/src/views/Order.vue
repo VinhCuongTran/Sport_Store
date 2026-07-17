@@ -947,7 +947,8 @@ const submitReview = async () => {
     const userStr = localStorage.getItem("user");
     const user = JSON.parse(userStr);
 
-    await ReviewService.create({
+    // 1. Hứng kết quả trả về từ Backend vào biến 'response'
+    const response = await ReviewService.create({
       user_id: user.id,
       product_id: reviewItem.value.product_id,
       order_id: currentOrderId.value,
@@ -955,19 +956,22 @@ const submitReview = async () => {
       comment: reviewForm.value.comment,
     });
 
+    // 2. Lấy thông báo động từ Backend (response.message) để hiển thị
     confirmDialog.value.open(
-      "Thành công",
-      "Cảm ơn bạn đã gửi đánh giá chất lượng sản phẩm!",
+      "Thông báo",
+      response.message || "Cảm ơn bạn đã gửi đánh giá chất lượng sản phẩm!",
       {
         isAlert: true,
       },
     );
+
     dialogReview.value = false;
     reviewedItems.value.push(reviewItem.value.product_id);
   } catch (error) {
     confirmDialog.value.open(
       "Thất bại",
-      "Không thể gửi phản hồi. Hệ thống ghi nhận bạn đã thực hiện đánh giá mục này rồi.",
+      error.response?.data?.message ||
+        "Không thể gửi phản hồi. Hệ thống ghi nhận bạn đã thực hiện đánh giá mục này rồi.",
       { isAlert: true, iconColor: "red" },
     );
   } finally {

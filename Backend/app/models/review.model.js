@@ -4,9 +4,17 @@ const generateId = require("../utils/generate.id");
 const Review = {
   create: async (data) => {
     const id = generateId();
-    const [result] = await db.query(
-      "INSERT INTO reviews (id, product_id, user_id, rating, comment) VALUES (?, ?, ?, ?, ?)",
-      [id, data.product_id, data.user_id, data.rating, data.comment || null],
+    // Đã thêm cột status vào câu lệnh INSERT
+    await db.query(
+      "INSERT INTO reviews (id, product_id, user_id, rating, comment, status) VALUES (?, ?, ?, ?, ?, ?)",
+      [
+        id,
+        data.product_id,
+        data.user_id,
+        data.rating,
+        data.comment || null,
+        data.status || "approved",
+      ],
     );
     return id;
   },
@@ -28,7 +36,7 @@ const Review = {
       SELECT r.*, u.name as user_name, u.avatar as user_avatar 
       FROM reviews r
       JOIN users u ON r.user_id = u.id
-      WHERE r.product_id = ?
+      WHERE r.product_id = ? AND r.status = 'approved' -- Chỉ lấy đánh giá SẠCH
       ORDER BY r.created_at DESC
     `,
       [productId],
@@ -42,6 +50,15 @@ const Review = {
       [productId, userId],
     );
     return rows.length > 0;
+  },
+
+  // THÊM MỚI: Hàm để Admin duyệt/ẩn bài hoặc Khách hàng báo cáo
+  updateStatus: async (id, status) => {
+    const [result] = await db.query(
+      "UPDATE reviews SET status = ? WHERE id = ?",
+      [status, id],
+    );
+    return result.affectedRows > 0;
   },
 
   delete: async (id) => {
