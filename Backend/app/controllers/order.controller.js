@@ -290,7 +290,12 @@ const OrderController = {
       staff_id,
     );
 
-    // Thêm đoạn này vào phần xử lý cập nhật trạng thái trong order.controller.js
+    if (!isUpdated)
+      throw new ApiError(404, "Không tìm thấy đơn hàng để cập nhật");
+
+    // =================================================================
+    // 1. NẾU GIAO THÀNH CÔNG -> Xóa tạm giữ (reserved_stock)
+    // =================================================================
     if (status === "completed" && oldStatus !== "completed") {
       try {
         const [orderItems] = await db.query(
@@ -299,7 +304,6 @@ const OrderController = {
         );
         for (const item of orderItems) {
           if (item.variant_id) {
-            // Hàng đã giao xong, xóa khỏi danh sách tạm giữ
             await db.query(
               "UPDATE product_variants SET reserved_stock = reserved_stock - ? WHERE id = ?",
               [item.quantity, item.variant_id],
@@ -311,63 +315,61 @@ const OrderController = {
       }
     }
 
-    if (!isUpdated)
-      throw new ApiError(404, "Không tìm thấy đơn hàng để cập nhật");
-
-    // --- XỬ LÝ DÒNG TIỀN THEO NGHIỆP VỤ ---
-    try {
-      // 1. TẠO DÒNG THU TIỀN KHI ĐƠN COD HOÀN THÀNH
-      // Vì online payment đã được thu ngay lúc tạo đơn rồi
-      const isCodPayment = ["COD", "Cash"].includes(order.payment_method);
-      if (isCodPayment && status === "completed") {
-        const [existingPayment] = await db.query(
-          `SELECT id FROM transactions WHERE order_id = ? AND transaction_type = 'payment'`,
+    // =================================================================
+    // 2. [THÊM MỚI] NẾU ADMIN HỦY ĐƠN -> Trả lại hàng vào kho (Xóa lỗi mất hàng)
+    // =================================================================
+    if (status === "cancelled" && oldStatus !== "cancelled") {
+      try {
+        const [orderItems] = await db.query(
+          "SELECT variant_id, quantity FROM order_items WHERE order_id = ?",
           [orderId],
         );
+        for (const item of orderItems) {
+          if (item.variant_id) {
+            // Trả lại stock hiện có, và trừ đi số lượng đã tạm giữ
+            await db.query(
+              `UPDATE product_variants 
+               SET stock = stock + ?, reserved_stock = reserved_stock - ? 
+               WHERE id = ?`,
+              [item.quantity, item.quantity, item.variant_id],
+            );
 
-        if (existingPayment.length === 0) {
-          const transId = generateId();
+            // Tùy chọn: Ghi log hoàn kho để quản lý kho dễ theo dõi
+            const logId = generateId();
+            await db.query(
+              "INSERT INTO inventory_logs (id, variant_id, type, quantity, reference_id, note) VALUES (?, ?, 'import', ?, ?, ?)",
+              [
+                logId,
+                item.variant_id,
+                item.quantity,
+                orderId,
+                `Hoàn kho do Admin hủy đơn hàng #${orderId}`,
+              ],
+            );
+          }
+        }
+
+        // Hoàn lại lượt dùng Voucher nếu có
+        if (order.voucher_id) {
           await db.query(
-            `INSERT INTO transactions (id, order_id, amount, transaction_type, payment_method, status, note) 
-             VALUES (?, ?, ?, 'payment', ?, 'success', ?)`,
-            [
-              transId,
-              orderId,
-              order.total_price,
-              order.payment_method,
-              `Thu tiền đơn COD #${orderId} (Giao thành công)`,
-            ],
+            `UPDATE vouchers SET used_count = used_count - 1 WHERE id = ? AND used_count > 0`,
+            [order.voucher_id],
           );
         }
-      }
-
-      // 2. TẠO DÒNG HOÀN TIỀN KHI HỦY ĐƠN ĐÃ THANH TOÁN (BankTransfer, VNPay, Momo...)
-      if (status === "cancelled" && oldPaymentStatus === "paid") {
-        const [existingRefund] = await db.query(
-          `SELECT id FROM transactions WHERE order_id = ? AND transaction_type = 'refund'`,
-          [orderId],
-        );
-
-        if (existingRefund.length === 0) {
-          const refundId = generateId();
+        if (order.shipping_voucher_id) {
           await db.query(
-            `INSERT INTO transactions (id, order_id, amount, transaction_type, payment_method, status, note) 
-             VALUES (?, ?, ?, 'refund', ?, 'success', ?)`,
-            [
-              refundId,
-              orderId,
-              order.total_price,
-              order.payment_method,
-              `Hoàn trả tiền (Refund) cho đơn hàng #${orderId} bị hủy bởi Admin`,
-            ],
+            `UPDATE vouchers SET used_count = used_count - 1 WHERE id = ? AND used_count > 0`,
+            [order.shipping_voucher_id],
           );
         }
+      } catch (error) {
+        console.error("Lỗi khi hoàn trả hàng do hủy đơn:", error);
       }
-    } catch (transError) {
-      console.error("Lỗi khi cập nhật trạng thái dòng tiền:", transError);
     }
 
-    // Lưu lịch sử xuất kho
+    // =================================================================
+    // 3. NẾU ĐÃ XÁC NHẬN -> Ghi log Lịch sử Xuất Kho (Giữ nguyên)
+    // =================================================================
     if (status === "confirmed" && oldStatus === "pending") {
       try {
         const [orderItems] = await db.query(

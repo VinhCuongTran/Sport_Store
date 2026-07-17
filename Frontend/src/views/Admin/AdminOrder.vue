@@ -366,6 +366,18 @@
 
         <v-divider></v-divider>
         <v-card-actions class="px-6 py-4 gap-3 bg-white">
+          <!-- THÊM NÚT IN TẠI ĐÂY -->
+          <v-btn
+            v-if="['confirmed', 'shipping', 'completed'].includes(selectedOrder.status)"
+            color="green-darken-3"
+            variant="tonal"
+            rounded="lg"
+            class="text-capitalize font-weight-bold mr-auto"
+            @click="printExportTicket"
+          >
+            <v-icon start>mdi-printer</v-icon>In Phiếu Xuất
+          </v-btn>
+          <!-- KẾT THÚC THÊM -->
           <v-spacer />
           <v-btn
             color="grey-darken-1"
@@ -562,6 +574,126 @@ const updateStatus = async () => {
     isUpdating.value = false;
   }
 };
+const printExportTicket = () => {
+  const order = selectedOrder.value;
+  if (!order) return;
+  
+  const today = new Date();
+  let rows = '';
+  let totalQty = 0;
+
+  order.items.forEach((item, index) => {
+    totalQty += item.quantity;
+    rows += `
+      <tr>
+        <td class="text-center">${index + 1}</td>
+        <td>${item.product_name} (${item.color} - ${item.size})</td>
+        <td class="text-center">Cái</td>
+        <td class="text-center">${item.quantity}</td>
+        <td class="text-right">${formatPrice(item.price)}</td>
+        <td class="text-right">${formatPrice(item.price * item.quantity)}</td>
+      </tr>
+    `;
+  });
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Phiếu Xuất Kho - ĐH #${order.id}</title>
+        <style>
+          body { font-family: 'Times New Roman', serif; padding: 30px; color: #000; font-size: 15px; }
+          .header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+          .company-info h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
+          .company-info p { margin: 3px 0; font-size: 14px; }
+          .ticket-meta p { margin: 3px 0; font-size: 14px; }
+          .ticket-title { text-align: center; margin: 30px 0; }
+          .ticket-title h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+          .ticket-title p { margin: 5px 0; font-style: italic; }
+          .info-section { margin-bottom: 20px; line-height: 1.6; }
+          .info-section p { margin: 5px 0; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+          th { background-color: #f0f0f0; text-align: center; }
+          .text-right { text-align: right; }
+          .text-center { text-align: center; }
+          .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
+          .signature-box { text-align: center; width: 33%; }
+          .signature-box p { margin: 0; }
+          .signature-box .title { font-weight: bold; }
+          .signature-box .sub { font-style: italic; font-size: 13px; margin-bottom: 90px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="company-info">
+            <h2>SPORT STORE</h2>
+            <p>Địa chỉ: 123 Đường 3/2, Phường Ninh Kiều, Thành phố Cần Thơ</p>
+            <p>SĐT: 0987654321 - Email: sportstore@gmail.com</p>
+          </div>
+          <div class="ticket-meta text-right">
+            <p>Mã đơn hàng: <strong>${order.id.toUpperCase()}</strong></p>
+          </div>
+        </div>
+        
+        <div class="ticket-title">
+          <h1>PHIẾU XUẤT KHO KIÊM GIAO HÀNG</h1>
+          <p>Ngày ${today.getDate()} tháng ${today.getMonth() + 1} năm ${today.getFullYear()}</p>
+        </div>
+        
+        <div class="info-section">
+          <p><strong>Khách hàng:</strong> ${order.receiver_name}</p>
+          <p><strong>Số điện thoại:</strong> ${order.phone_number}</p>
+          <p><strong>Địa chỉ giao hàng:</strong> ${order.shipping_address}</p>
+          <p><strong>Ghi chú:</strong> Xuất bán hàng hóa</p>
+        </div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">STT</th>
+              <th>Tên sản phẩm (Phân loại)</th>
+              <th style="width: 60px;">ĐVT</th>
+              <th style="width: 80px;">Số lượng</th>
+              <th style="width: 120px;">Đơn giá</th>
+              <th style="width: 130px;">Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+          <tfoot>
+            <tr>
+              <th colspan="3" class="text-right">Tổng cộng:</th>
+              <th class="text-center">${totalQty}</th>
+              <th></th>
+              <th class="text-right">${formatPrice(order.total_price)}</th>
+            </tr>
+          </tfoot>
+        </table>
+        
+        <div class="signatures">
+          <div class="signature-box">
+            <p class="title">Người lập phiếu</p>
+            <p class="sub">(Ký, họ tên)</p>
+          </div>
+          <div class="signature-box">
+            <p class="title">Người giao hàng</p>
+            <p class="sub">(Ký, họ tên)</p>
+          </div>
+          <div class="signature-box">
+            <p class="title">Người nhận hàng</p>
+            <p class="sub">(Ký, họ tên)</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 250);
+};
 
 watch(
   () => route.query.open_order,
@@ -573,6 +705,7 @@ watch(
     }
   }
 );
+
 
 onMounted(() => fetchOrders());
 </script>
