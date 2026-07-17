@@ -140,6 +140,7 @@ const activePanels = ref([]);
 const sortOrder = ref("popular");
 const sortOptions = [
   { title: "Phổ biến nhất", value: "popular" },
+  { title: "Xem nhiều nhất (HOT)", value: "most_viewed" }, // <-- THÊM DÒNG NÀY
   { title: "Bán chạy nhất", value: "best_selling" },
   { title: "Đánh giá cao", value: "top_rated" },
   { title: "Mới nhất", value: "newest" },
@@ -221,7 +222,7 @@ const getProductsForFilter = (excludeFilter = null) => {
       });
     });
   }
-  
+
   if (selectedSport.value) {
     const sportCategoryIds = categories.value
       .filter((c) => c.sport_id === selectedSport.value)
@@ -463,6 +464,9 @@ const filteredProducts = computed(() => {
     );
   } else if (sortOrder.value === "best_selling") {
     result.sort((a, b) => (b.sold_count || 0) - (a.sold_count || 0));
+  } else if (sortOrder.value === "most_viewed") {
+    // <-- THÊM ĐOẠN LOGIC NÀY
+    result.sort((a, b) => (b.views || 0) - (a.views || 0));
   } else if (sortOrder.value === "top_rated") {
     result.sort((a, b) => (b.average_rating || 0) - (a.average_rating || 0));
   } else {

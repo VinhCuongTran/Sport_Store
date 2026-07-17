@@ -125,12 +125,11 @@ const Product = {
     let isFavoriteQuery = "0 as is_favorite";
 
     if (userId) {
-      // ĐÃ SỬA: Thêm "AS is_favorite" vào cuối
       isFavoriteQuery =
         "(SELECT COUNT(*) FROM favorites WHERE product_id = p.id AND user_id = ?) AS is_favorite";
       params.push(userId);
     }
-    params.push(id); // Tham số tiếp theo cho WHERE p.id = ?
+    params.push(id); 
 
     let query = `
       SELECT p.*, b.name as brand_name, 
@@ -144,16 +143,9 @@ const Product = {
                THEN p.discount_percent
                ELSE 0
              END AS active_discount,
-
-             -- ĐẾM SỐ LƯỢNG YÊU THÍCH TỔNG
              (SELECT COUNT(*) FROM favorites WHERE product_id = p.id) as favorite_count,
-             
-             -- TÍNH SỐ LƯỢNG ĐÃ BÁN
              (SELECT IFNULL(SUM(quantity), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE oi.product_id = p.id AND o.status != 'cancelled') as sold_count,
-             
-             -- CHECK XEM USER CÓ THÍCH CHƯA
              ${isFavoriteQuery}
-
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
       LEFT JOIN categories c ON p.category_id = c.id
@@ -164,6 +156,11 @@ const Product = {
 
     const [product] = await db.query(query, params);
     if (product.length === 0) return null;
+
+    // ============== THÊM ĐOẠN CODE NÀY ĐỂ TĂNG VIEW ==============
+    await db.query("UPDATE products SET views = views + 1 WHERE id = ?", [id]);
+    product[0].views = (product[0].views || 0) + 1; // Cập nhật data trả về cho frontend luôn
+    // =============================================================
 
     const [variants] = await db.query(
       "SELECT * FROM product_variants WHERE product_id = ?",

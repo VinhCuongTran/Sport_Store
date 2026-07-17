@@ -136,6 +136,20 @@
 
               <span class="text-grey-lighten-1">|</span>
 
+              <!-- THÊM ĐOẠN HIỂN THỊ LƯỢT XEM NÀY -->
+              <div
+                class="d-flex align-center gap-1 text-body-2 text-grey-darken-2"
+              >
+                <v-icon size="small" color="blue">mdi-eye-outline</v-icon>
+                <span
+                  >Lượt xem:
+                  <strong class="text-black">{{ product.views || 0 }}</strong></span
+                >
+              </div>
+
+              <span class="text-grey-lighten-1">|</span>
+              <!-- KẾT THÚC THÊM -->
+
               <div
                 class="d-flex align-center gap-1 text-body-2 text-grey-darken-2"
               >

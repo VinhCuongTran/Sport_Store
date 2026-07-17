@@ -23,6 +23,16 @@
         -{{ product.active_discount }}%
       </v-chip>
 
+      <!-- THÊM HUY HIỆU HOT (nếu view >= 50, bạn có thể chỉnh số này) -->
+      <v-chip
+        v-if="product.views >= 50"
+        color="orange-darken-3"
+        class="hot-badge font-weight-bold text-white shadow-sm"
+        size="small"
+      >
+        🔥 HOT
+      </v-chip>
+
       <!-- Nút Yêu thích trên Card -->
       <v-btn
         icon
@@ -67,14 +77,23 @@
         </template>
       </div>
 
-      <!-- Thống kê Đã bán & Lượt thích -->
+      <!-- Thống kê Đã bán & Lượt thích & Lượt Xem -->
       <div
-        class="text-caption text-grey-darken-2 mt-2 d-flex justify-space-between align-center px-2"
+        class="text-caption text-grey-darken-2 mt-2 d-flex justify-space-between align-center px-1"
       >
         <span class="d-flex align-center">
           <v-icon size="x-small" class="mr-1" color="red">mdi-heart</v-icon>
           {{ favoriteCount }}
         </span>
+
+        <!-- THÊM LƯỢT XEM VÀO GIỮA -->
+        <span class="d-flex align-center">
+          <v-icon size="x-small" class="mr-1" color="blue"
+            >mdi-eye-outline</v-icon
+          >
+          {{ product.views || 0 }}
+        </span>
+
         <span class="d-flex align-center">
           <v-icon size="x-small" class="mr-1">mdi-shopping-outline</v-icon>
           Đã bán: {{ product.sold_count || 0 }}
@@ -169,6 +188,14 @@ const formatPrice = (value) => {
 </script>
 
 <style scoped>
+
+.hot-badge {
+  position: absolute;
+  top: 10px;
+  left: 50px; /* Cách nút tim ra một khoảng */
+  z-index: 2;
+}
+
 .product-card {
   transition: all 0.4s ease-in-out;
   border: 1px solid rgba(0, 26, 45, 0.1);
