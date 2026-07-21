@@ -4,13 +4,13 @@ const router = express.Router();
 const ActivityLogController = require("../controllers/activity_log.controller");
 const {
   verifyToken,
-  isAdminOrStaff,
+  isAdminOnly,
 } = require("../middlewares/auth.middleware");
 
 router.get(
   "/",
   verifyToken,
-  isAdminOrStaff,
+  isAdminOnly,
   ActivityLogController.getAll,
 );
 

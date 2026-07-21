@@ -15,9 +15,6 @@
         >
           Quản lý Voucher
         </h2>
-        <span class="text-caption text-indigo-darken-4"
-          >Cấu hình mã giảm giá và khuyến mãi</span
-        >
       </div>
       <v-btn
         color="indigo-darken-4"
@@ -27,6 +24,7 @@
         variant="elevated"
         class="text-capitalize font-weight-semibold"
         @click="openModal()"
+        v-if="isSuperAdmin"
       >
         Thêm Voucher Mới
       </v-btn>
@@ -107,7 +105,7 @@
           </v-chip>
         </template>
 
-        <template v-slot:item.discount="{ item }">
+        <template v-slot:item.discount_value="{ item }">
           <div
             class="text-body-2 font-weight-bold mb-1"
             :class="
@@ -163,7 +161,7 @@
           </div>
         </template>
 
-        <template v-slot:item.time="{ item }">
+        <template v-slot:item.end_date="{ item }">
           <div class="text-caption text-grey-darken-3 mb-1">
             <span class="font-weight-bold text-green-darken-2">Từ:</span>
             {{ formatDateDisplay(item.start_date) }}
@@ -174,7 +172,7 @@
           </div>
         </template>
 
-        <template v-slot:item.actions="{ item }">
+        <template v-slot:item.actions="{ item }" >
           <div class="d-flex justify-center align-center gap-2">
             <v-btn
               color="amber-darken-2"
@@ -481,9 +479,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import VoucherService from "@/services/voucher.service";
 import Loading from "@/components/Loading.vue";
+import AuthService from "@/services/auth.service";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
 const vouchers = ref([]);
@@ -493,28 +492,39 @@ const isLoading = ref(false);
 const search = ref("");
 const confirmDialogRef = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
+const isSuperAdmin = computed(() => AuthService.isSuperAdmin());
 
-const headers = [
-  {
-    title: "STT",
-    key: "index",
-    width: "70px",
-    align: "center",
-    sortable: false,
-  },
-  { title: "Mã Voucher", key: "code", align: "start", width: "160px" },
-  { title: "Loại / Giá trị", key: "discount", align: "start" },
-  { title: "Điều kiện", key: "condition", align: "start" },
-  { title: "Đã dùng / Giới hạn", key: "used_count", align: "center" },
-  { title: "Thời gian", key: "time", align: "start" },
-  {
-    title: "Thao tác",
-    key: "actions",
-    sortable: false,
-    align: "center",
-    width: "180px",
-  },
-];
+// Đừng quên import { computed } (bạn đã có sẵn rồi)
+const headers = computed(() => {
+  // Mảng chứa các cột cơ bản mà ai cũng được xem
+  const baseHeaders = [
+    {
+      title: "STT",
+      key: "index",
+      width: "70px",
+      align: "center",
+      sortable: false,
+    },
+    { title: "Mã Voucher", key: "code", align: "start", width: "160px" },
+    { title: "Loại / Giá trị", key: "discount_value", align: "start" },
+    { title: "Điều kiện", key: "condition", align: "start" },
+    { title: "Đã dùng / Giới hạn", key: "used_count", align: "center" },
+    { title: "Thời gian", key: "end_date", align: "start" },
+  ];
+
+  // Nếu là Admin thì mới push (thêm) cột Thao tác vào mảng headers
+  if (isSuperAdmin.value) {
+    baseHeaders.push({
+      title: "Thao tác",
+      key: "actions",
+      sortable: false,
+      align: "center",
+      width: "180px",
+    });
+  }
+
+  return baseHeaders;
+});
 
 const formData = ref({
   id: null,
