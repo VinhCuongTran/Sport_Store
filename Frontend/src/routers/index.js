@@ -19,6 +19,11 @@ const routes = [
         component: () => import("../views/Admin/AdminTransaction.vue"),
       },
       {
+        path: "activity-logs",
+        name: "admin-activity-log",
+        component: () => import("../views/Admin/AdminActivityLog.vue"),
+      },
+      {
         path: "categories",
         name: "admin-category",
         component: () => import("../views/Admin/AdminCategory.vue"),

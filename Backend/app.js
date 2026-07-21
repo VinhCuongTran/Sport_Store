@@ -18,6 +18,7 @@ const notificationRouter = require("./app/routes/notification.routes");
 const chatRouter = require("./app/routes/chat.routes");
 const searchRouter = require("./app/routes/search.routes"); // Import search routes
 const transactionRouter = require("./app/routes/transaction.routes"); // Import transaction routes
+const activityLogRouter = require("./app/routes/activity_log.routes"); // Import activity log routes
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/notifications", notificationRouter);
 app.use("/api/chats", chatRouter); // Đăng ký route cho chat
 app.use("/api/search", searchRouter); // Đăng ký route cho tìm kiếm bằng hình ảnh
 app.use("/api/transactions", transactionRouter); // Đăng ký route cho transactions
+app.use("/api/activity-logs", activityLogRouter); // Đăng ký route cho activity logs
 
 app.get("/", (req, res) => {
   res.json({ message: "Welcome to the Sports Store API!" });

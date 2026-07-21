@@ -18,85 +18,65 @@
       </div>
 
       <v-list density="compact" nav class="pa-2 mt-1">
+        <!-- NHÓM 1: TỔNG QUAN & HỆ THỐNG (Chỉ Admin) -->
+        <template v-if="isSuperAdmin">
+          <v-list-subheader
+            class="text-uppercase font-weight-bold text-indigo-lighten-3 text-caption"
+            style="letter-spacing: 1px"
+          >
+            Tổng quan & Hệ thống
+          </v-list-subheader>
+
+          <v-list-item
+            prepend-icon="mdi-chart-line"
+            title="Thống kê"
+            :to="{ name: 'admin-stats' }"
+            exact
+            color="white"
+            rounded="lg"
+            class="mb-1 nav-item"
+          ></v-list-item>
+          <v-list-item
+            prepend-icon="mdi-cash-multiple"
+            title="Dòng tiền"
+            :to="{ name: 'admin-transaction' }"
+            exact
+            color="white"
+            rounded="lg"
+            class="mb-1 nav-item"
+          ></v-list-item>
+          <v-list-item
+            prepend-icon="mdi-account-group-outline"
+            title="Khách hàng"
+            :to="{ name: 'admin-user' }"
+            exact
+            color="white"
+            rounded="lg"
+            class="mb-1 nav-item"
+          ></v-list-item>
+          <v-list-item
+            prepend-icon="mdi-history"
+            title="Lịch sử Thao tác"
+            :to="{ name: 'admin-activity-log' }"
+            exact
+            color="white"
+            rounded="lg"
+            class="mb-1 nav-item"
+          ></v-list-item>
+
+          <v-divider
+            class="my-2"
+            style="border-color: rgba(255, 255, 255, 0.1)"
+          ></v-divider>
+        </template>
+
+        <!-- NHÓM 2: QUẢN LÝ BÁN HÀNG -->
         <v-list-subheader
           class="text-uppercase font-weight-bold text-indigo-lighten-3 text-caption"
           style="letter-spacing: 1px"
         >
-          Menu Quản Trị
+          Quản lý Bán hàng
         </v-list-subheader>
-
-        <v-list-item
-          v-if="isSuperAdmin"
-          prepend-icon="mdi-chart-line"
-          title="Thống kê"
-          :to="{ name: 'admin-stats' }"
-          exact
-          color="white"
-          rounded="lg"
-          class="mb-1 nav-item"
-        ></v-list-item>
-
-        <v-list-item
-          v-if="isSuperAdmin"
-          prepend-icon="mdi-cash-multiple"
-          title="Dòng tiền"
-          :to="{ name: 'admin-transaction' }"
-          exact
-          color="white"
-          rounded="lg"
-          class="mb-1 nav-item"
-        ></v-list-item>
-
-        <v-list-item
-          prepend-icon="mdi-shape-outline"
-          title="Loại hàng"
-          :to="{ name: 'admin-category' }"
-          exact
-          color="white"
-          rounded="lg"
-          class="mb-1 nav-item"
-        ></v-list-item>
-
-        <v-list-item
-          prepend-icon="mdi-basketball"
-          title="Môn thể thao"
-          :to="{ name: 'admin-sport' }"
-          exact
-          color="white"
-          rounded="lg"
-          class="mb-1 nav-item"
-        ></v-list-item>
-
-        <v-list-item
-          prepend-icon="mdi-tag-multiple-outline"
-          title="Thương hiệu"
-          :to="{ name: 'admin-brand' }"
-          exact
-          color="white"
-          rounded="lg"
-          class="mb-1 nav-item"
-        ></v-list-item>
-
-        <v-list-item
-          v-if="isSuperAdmin"
-          prepend-icon="mdi-account-group-outline"
-          title="Khách hàng"
-          :to="{ name: 'admin-user' }"
-          exact
-          color="white"
-          rounded="lg"
-          class="mb-1 nav-item"
-        ></v-list-item>
-
-        <v-list-item
-          prepend-icon="mdi-package-variant-closed"
-          title="Sản phẩm"
-          :to="{ name: 'admin-product' }"
-          exact
-          color="white"
-          rounded="lg"
-          class="mb-1 nav-item"
-        ></v-list-item>
 
         <v-list-item
           prepend-icon="mdi-clipboard-text-outline"
@@ -107,7 +87,6 @@
           rounded="lg"
           class="mb-1 nav-item"
         ></v-list-item>
-
         <v-list-item
           prepend-icon="mdi-ticket-percent-outline"
           title="Voucher"
@@ -117,7 +96,6 @@
           rounded="lg"
           class="mb-1 nav-item"
         ></v-list-item>
-
         <v-list-item
           prepend-icon="mdi-star-outline"
           title="Đánh giá"
@@ -133,6 +111,57 @@
           style="border-color: rgba(255, 255, 255, 0.1)"
         ></v-divider>
 
+        <!-- NHÓM 3: DANH MỤC SẢN PHẨM -->
+        <v-list-subheader
+          class="text-uppercase font-weight-bold text-indigo-lighten-3 text-caption"
+          style="letter-spacing: 1px"
+        >
+          Sản phẩm & Danh mục
+        </v-list-subheader>
+
+        <v-list-item
+          prepend-icon="mdi-package-variant-closed"
+          title="Sản phẩm"
+          :to="{ name: 'admin-product' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+        <v-list-item
+          prepend-icon="mdi-shape-outline"
+          title="Loại hàng"
+          :to="{ name: 'admin-category' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+        <v-list-item
+          prepend-icon="mdi-basketball"
+          title="Môn thể thao"
+          :to="{ name: 'admin-sport' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+        <v-list-item
+          prepend-icon="mdi-tag-multiple-outline"
+          title="Thương hiệu"
+          :to="{ name: 'admin-brand' }"
+          exact
+          color="white"
+          rounded="lg"
+          class="mb-1 nav-item"
+        ></v-list-item>
+
+        <v-divider
+          class="my-2"
+          style="border-color: rgba(255, 255, 255, 0.1)"
+        ></v-divider>
+
+        <!-- NHÓM 4: KHO HÀNG -->
         <v-list-subheader
           class="text-uppercase font-weight-bold text-indigo-lighten-3 text-caption"
           style="letter-spacing: 1px"
@@ -149,7 +178,6 @@
           rounded="lg"
           class="mb-1 nav-item"
         ></v-list-item>
-
         <v-list-item
           prepend-icon="mdi-clipboard-check-outline"
           title="Tạo Phiếu Kiểm Kho"
@@ -190,12 +218,9 @@
 import { ref, computed } from "vue";
 import AdminHeader from "./AdminHeader.vue";
 import AuthService from "@/services/auth.service";
-
-// IMPORT COMPONENT CHAT
 import ChatBox from "@/components/Chat.vue";
 
 const drawer = ref(true);
-
 const isSuperAdmin = computed(() => AuthService.isSuperAdmin());
 </script>
 
