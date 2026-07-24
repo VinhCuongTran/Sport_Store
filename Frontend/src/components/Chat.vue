@@ -19,8 +19,13 @@
     <v-card
       v-show="isOpen"
       class="chat-floating-window d-flex rounded-xl elevation-6 border overflow-hidden"
+      :style="{ width: isAdmin ? '750px' : '400px' }"
     >
-      <div class="chat-sidebar border-e bg-white d-flex flex-column">
+      <!-- CHỈ HIỂN THỊ SIDEBAR NẾU LÀ ADMIN / STAFF -->
+      <div
+        v-if="isAdmin"
+        class="chat-sidebar border-e bg-white d-flex flex-column"
+      >
         <div class="pa-4 border-b d-flex align-center">
           <h2 class="text-h6 font-weight-black mb-0">Tin nhắn</h2>
         </div>
@@ -30,7 +35,7 @@
             v-model="search"
             density="compact"
             variant="outlined"
-            :placeholder="isAdmin ? 'Tìm khách hàng...' : 'Tìm kiếm...'"
+            placeholder="Tìm khách hàng..."
             prepend-inner-icon="mdi-magnify"
             hide-details
             rounded="lg"
@@ -68,9 +73,9 @@
               </v-badge>
             </template>
 
-            <v-list-item-title class="font-weight-bold text-body-1">{{
-              contact.name
-            }}</v-list-item-title>
+            <v-list-item-title class="font-weight-bold text-body-1">
+              {{ contact.name }}
+            </v-list-item-title>
 
             <v-list-item-subtitle
               class="text-caption mt-1 d-flex justify-space-between align-center"
@@ -382,6 +387,7 @@ const currentUser = ref(
     role: "customer",
   },
 );
+
 const isAdmin = computed(
   () =>
     currentUser.value.role === "admin" || currentUser.value.role === "staff",
@@ -403,20 +409,43 @@ const filteredContacts = computed(() => {
   );
 });
 
-const totalUnread = computed(() =>
-  contacts.value.reduce((sum, c) => sum + (c.unread || 0), 0),
-);
+const totalUnread = computed(() => {
+  if (!isAdmin.value) return activeContact.value?.unread || 0;
+  return contacts.value.reduce((sum, c) => sum + (c.unread || 0), 0);
+});
 
 const goToOrder = (orderId) => {
   isOpen.value = false;
-  if (isAdmin.value) router.push("/admin/orders");
-  else router.push("/orders");
+
+  if (isAdmin.value) {
+    router.push({ path: "/admin/orders", query: { open_order: orderId } });
+  } else {
+    router.push({ path: "/orders", query: { open_order: orderId } });
+  }
 };
 
 const loadContacts = async () => {
   try {
     const res = await api.get("/chats/contacts");
     contacts.value = res.data || [];
+
+    if (isAdmin.value) {
+      if (contacts.value.length > 0 && !activeContact.value) {
+        await selectContact(contacts.value[0]);
+      }
+    } else {
+      const shopId = contacts.value.length > 0 ? contacts.value[0].id : 1;
+
+      activeContact.value = {
+        id: shopId,
+        name: "Chăm sóc khách hàng",
+        avatar: "https://placehold.co/100?text=CSKH",
+        is_online: true,
+        unread: contacts.value.length > 0 ? contacts.value[0].unread : 0,
+      };
+
+      await selectContact(activeContact.value);
+    }
   } catch (error) {
     console.error("Lỗi lấy danh sách liên hệ:", error);
   }
@@ -424,9 +453,10 @@ const loadContacts = async () => {
 
 const selectContact = async (contact) => {
   activeContact.value = contact;
-  contact.unread = 0;
+  contact.unread = 0; // Xóa chấm đỏ khi click vào liên hệ
   try {
     const res = await api.get(`/chats/${contact.id}`);
+
     messages.value = res.data || [];
     scrollToBottom();
 
@@ -438,6 +468,7 @@ const selectContact = async (contact) => {
     }
   } catch (error) {
     console.error("Lỗi lấy lịch sử tin nhắn:", error);
+    messages.value = [];
   }
 };
 
@@ -446,7 +477,9 @@ const openChatWithOrder = async (orderId) => {
   orderContext.value = { id: orderId };
   productContext.value = null;
   if (contacts.value.length === 0) await loadContacts();
-  if (contacts.value.length > 0) await selectContact(contacts.value[0]);
+  if (isAdmin.value && contacts.value.length > 0 && !activeContact.value) {
+    await selectContact(contacts.value[0]);
+  }
 };
 
 const openChatWithProduct = async (product) => {
@@ -454,7 +487,9 @@ const openChatWithProduct = async (product) => {
   productContext.value = product;
   orderContext.value = null;
   if (contacts.value.length === 0) await loadContacts();
-  if (contacts.value.length > 0) await selectContact(contacts.value[0]);
+  if (isAdmin.value && contacts.value.length > 0 && !activeContact.value) {
+    await selectContact(contacts.value[0]);
+  }
 };
 
 defineExpose({ openChatWithOrder, openChatWithProduct });
@@ -462,9 +497,11 @@ defineExpose({ openChatWithOrder, openChatWithProduct });
 const initSocket = () => {
   socket = io(SOCKET_URL, { query: { userId: currentUser.value.id } });
 
-  socket.emit("user_connected", String(currentUser.value.id));
+  socket.on("connect", () => {
+    console.log("Socket connected:", socket.id);
+    socket.emit("user_connected", String(currentUser.value.id));
+  });
 
-  // Khởi tạo các user đang online lúc vừa load web
   socket.on("initial_online_users", (onlineIds) => {
     contacts.value.forEach((contact) => {
       if (onlineIds.map(String).includes(String(contact.id))) {
@@ -480,28 +517,73 @@ const initSocket = () => {
   });
 
   socket.on("receive_message", (data) => {
-    if (activeContact.value && data.sender_id == activeContact.value.id) {
+    console.log("Realtime message received:", data);
+
+    // 1. NHẬN TIN DÀNH CHO KHÁCH HÀNG
+    if (!isAdmin.value) {
+      if (!activeContact.value) {
+        activeContact.value = {
+          id: data.sender_id,
+          name: "Chăm sóc khách hàng",
+          avatar: "https://placehold.co/100?text=CSKH",
+          is_online: true,
+          unread: 0,
+        };
+      }
+
+      if (isOpen.value) {
+        messages.value.push(data);
+        scrollToBottom();
+        socket.emit("mark_read", {
+          sender_id: data.sender_id,
+          receiver_id: currentUser.value.id,
+        });
+      } else {
+        // Tăng đếm nếu chưa mở
+        activeContact.value.unread = (activeContact.value.unread || 0) + 1;
+      }
+      return;
+    }
+
+    // 2. NHẬN TIN DÀNH CHO ADMIN / STAFF
+    const partnerId =
+      data.sender_id == currentUser.value.id
+        ? data.receiver_id
+        : data.sender_id;
+
+    if (
+      isOpen.value &&
+      activeContact.value &&
+      partnerId == activeContact.value.id
+    ) {
+      // Tin nhắn thuộc về khung chat ĐANG MỞ
       messages.value.push(data);
       scrollToBottom();
-      socket.emit("mark_read", {
-        sender_id: data.sender_id,
-        receiver_id: currentUser.value.id,
-      });
+
+      if (data.sender_id != currentUser.value.id) {
+        socket.emit("mark_read", {
+          sender_id: data.sender_id,
+          receiver_id: currentUser.value.id,
+        });
+      }
 
       activeContact.value.last_message = data.content;
       activeContact.value.last_sender_id = data.sender_id;
-      // Đẩy lên đầu
+
       contacts.value = [
         activeContact.value,
         ...contacts.value.filter((c) => c.id != activeContact.value.id),
       ];
     } else {
-      const contact = contacts.value.find((c) => c.id == data.sender_id);
+      // Tin nhắn từ khách đang KHÔNG MỞ hoặc ĐANG ĐÓNG chat
+      const contact = contacts.value.find((c) => c.id == partnerId);
       if (contact) {
-        contact.unread = (contact.unread || 0) + 1;
+        if (data.sender_id != currentUser.value.id) {
+          contact.unread = (contact.unread || 0) + 1; // Nhảy số đỏ
+        }
         contact.last_message = data.content;
         contact.last_sender_id = data.sender_id;
-        // Đẩy lên đầu
+
         contacts.value = [
           contact,
           ...contacts.value.filter((c) => c.id != contact.id),
@@ -509,22 +591,6 @@ const initSocket = () => {
       } else {
         loadContacts();
       }
-    }
-  });
-
-  socket.on("user_status", (data) => {
-    const contact = contacts.value.find((c) => c.id == data.userId);
-    if (contact) contact.is_online = data.status === "online";
-    if (activeContact.value && activeContact.value.id == data.userId) {
-      activeContact.value.is_online = data.status === "online";
-    }
-  });
-
-  socket.on("messages_read", (data) => {
-    if (activeContact.value && activeContact.value.id == data.reader_id) {
-      messages.value.forEach((msg) => {
-        if (msg.sender_id == currentUser.value.id) msg.is_read = 1;
-      });
     }
   });
 };
@@ -549,7 +615,10 @@ const sendMessage = () => {
     product_image: pImage || null,
     content: newMessage.value.trim(),
     is_read: 0,
-    time: new Date().toLocaleTimeString("vi-VN", {
+    time: new Date().toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     }),
@@ -558,13 +627,14 @@ const sendMessage = () => {
   messages.value.push(msgData);
   socket.emit("send_message", msgData);
 
-  // Cập nhật realtime cho sidebar của mình
-  activeContact.value.last_message = msgData.content;
-  activeContact.value.last_sender_id = currentUser.value.id;
-  contacts.value = [
-    activeContact.value,
-    ...contacts.value.filter((c) => c.id != activeContact.value.id),
-  ];
+  if (isAdmin.value) {
+    activeContact.value.last_message = msgData.content;
+    activeContact.value.last_sender_id = currentUser.value.id;
+    contacts.value = [
+      activeContact.value,
+      ...contacts.value.filter((c) => c.id != activeContact.value.id),
+    ];
+  }
 
   newMessage.value = "";
   scrollToBottom();
@@ -572,9 +642,11 @@ const sendMessage = () => {
 
 const scrollToBottom = async () => {
   await nextTick();
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
+  setTimeout(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+    }
+  }, 100);
 };
 
 const closeWhenChatbotOpens = () => {
@@ -597,6 +669,21 @@ watch(isOpen, (newVal) => {
     setTimeout(() => {
       document.addEventListener("click", handleClickOutside);
     }, 50);
+
+    scrollToBottom();
+
+    // Khách hàng mở khung chat là tự động xóa thông báo chưa đọc
+    if (
+      !isAdmin.value &&
+      activeContact.value &&
+      activeContact.value.unread > 0
+    ) {
+      activeContact.value.unread = 0;
+      socket.emit("mark_read", {
+        sender_id: activeContact.value.id,
+        receiver_id: currentUser.value.id,
+      });
+    }
   } else {
     document.removeEventListener("click", handleClickOutside);
   }
@@ -660,7 +747,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* CHỈNH LẠI CSS CHẤM ĐỎ ĐỂ HIỂN THỊ CHỮ SỐ BÊN TRONG */
 .unread-dot {
   position: absolute;
   top: -4px;
@@ -683,7 +769,6 @@ onUnmounted(() => {
   position: fixed;
   bottom: 95px;
   right: 28px;
-  width: 750px;
   height: 550px;
   z-index: 9998;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);

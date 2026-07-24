@@ -31,6 +31,8 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+
+    // Xử lý hết hạn Token (401)
     if (
       error.response &&
       error.response.status === 401 &&
@@ -65,22 +67,35 @@ api.interceptors.response.use(
       }
     }
 
-    const errorMessage =
-      error.response?.data?.message || error.response?.data || "";
     const errorString = JSON.stringify(
       error.response?.data || "",
     ).toLowerCase();
 
-    if (
-      error.response?.status === 403 &&
-      (errorString.includes("bị khóa") || errorString.includes("bị khoá"))
-    ) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      window.location.href = "/login?locked=true";
-      return new Promise(() => {});
+    // Xử lý cấm truy cập (403)
+    if (error.response?.status === 403) {
+      // Trường hợp 1: Tài khoản bị khóa
+      if (errorString.includes("bị khóa") || errorString.includes("bị khoá")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        window.location.href = "/login?locked=true";
+        return new Promise(() => {});
+      }
+
+      // Trường hợp 2: Bị hạ quyền (từ staff -> user) hoặc không có quyền truy cập
+      if (
+        errorString.includes("quyền truy cập đã thay đổi") ||
+        errorString.includes("không có quyền")
+      ) {
+        alert("Quyền hạn của bạn đã thay đổi. Vui lòng đăng nhập lại.");
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        return new Promise(() => {});
+      }
     }
+
     return Promise.reject(error);
   },
 );

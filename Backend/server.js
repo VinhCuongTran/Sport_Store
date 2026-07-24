@@ -4,6 +4,7 @@ require("dotenv").config();
 const http = require("http");
 const { Server } = require("socket.io");
 const ChatModel = require("./app/models/chat.model"); // Import ChatModel để sử dụng hàm sendRealTimeNotification
+const db = require("./app/utils/mysql.db");
 
 // 1. KHỞI TẠO BIẾN VÀ EXPORT HÀM TRƯỚC (Để tránh lỗi Circular Dependency)
 const onlineUsers = new Map();
@@ -58,28 +59,67 @@ io.on("connection", (socket) => {
   // NHẬN VÀ LƯU TIN NHẮN
   socket.on("send_message", async (data) => {
     try {
-      // 1. Lưu xuống MySQL
+      let actualReceiverId = data.receiver_id;
+
+      // 1. Xử lý ID ảo 'admin_group' từ Frontend của Khách hàng
+      if (data.receiver_id === "admin_group") {
+        const [admins] = await db.query(
+          "SELECT id FROM users WHERE role IN ('admin', 'staff') LIMIT 1",
+        );
+        actualReceiverId = admins.length > 0 ? admins[0].id : 1;
+      }
+
+      // 2. Lưu xuống MySQL
       const savedMessage = await ChatModel.saveMessage({
         sender_id: data.sender_id,
-        receiver_id: data.receiver_id,
+        receiver_id: actualReceiverId,
         order_id: data.order_id,
-        product_id: data.product_id, // <-- THÊM DÒNG NÀY ĐỂ DB BIẾT VÀ LƯU LẠI SẢN PHẨM
+        product_id: data.product_id,
         content: data.content,
       });
 
-      // 2. Format thời gian để trả về Frontend
       const messageToEmit = {
         ...savedMessage,
         time: new Date().toLocaleTimeString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
           hour: "2-digit",
           minute: "2-digit",
         }),
       };
 
-      // 3. Gửi cho người nhận (nếu họ đang online)
-      if (onlineUsers.has(data.receiver_id)) {
-        onlineUsers.get(data.receiver_id).forEach((socketId) => {
-          io.to(socketId).emit("receive_message", messageToEmit);
+      // 3. Phân luồng gửi tin nhắn bằng Socket
+      const [adminUsers] = await db.query(
+        "SELECT id FROM users WHERE role IN ('admin', 'staff')",
+      );
+      const adminIds = adminUsers.map((a) => String(a.id));
+
+      if (adminIds.includes(String(data.sender_id))) {
+        // TRƯỜNG HỢP A: Người gửi là Admin/Staff
+        // -> Gửi đích danh cho khách hàng
+        if (onlineUsers.has(String(actualReceiverId))) {
+          onlineUsers.get(String(actualReceiverId)).forEach((socketId) => {
+            io.to(socketId).emit("receive_message", messageToEmit);
+          });
+        }
+        // -> Đồng bộ tin nhắn cho các Admin/Staff KHÁC đang mở tab
+        adminIds.forEach((adminId) => {
+          if (adminId !== String(data.sender_id) && onlineUsers.has(adminId)) {
+            onlineUsers.get(adminId).forEach((socketId) => {
+              io.to(socketId).emit("receive_message", messageToEmit);
+            });
+          }
+        });
+      } else {
+        // TRƯỜNG HỢP B: Người gửi là Khách Hàng
+        // -> Phát tin nhắn này đến TẤT CẢ Admin/Staff đang online
+        adminIds.forEach((adminId) => {
+          if (onlineUsers.has(adminId)) {
+            onlineUsers.get(adminId).forEach((socketId) => {
+              io.to(socketId).emit("receive_message", messageToEmit);
+            });
+          }
         });
       }
     } catch (error) {

@@ -47,7 +47,7 @@
           ></v-list-item>
           <v-list-item
             prepend-icon="mdi-account-group-outline"
-            title="Khách hàng"
+            title="Người dùng"
             :to="{ name: 'admin-user' }"
             exact
             color="white"

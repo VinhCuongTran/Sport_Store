@@ -8,23 +8,33 @@ const ChatController = {
     const contacts = await ChatModel.getContacts(userId, role);
     res.json(contacts);
   }),
+
   getConversation: asyncHandler(async (req, res) => {
-    const userId1 = req.user.id; // ID người đang đăng nhập (Lấy từ middleware xác thực)
-    const userId2 = req.params.partnerId; // ID người đang chat cùng
+    const userId = req.user.id;
+    const role = req.user.role; // Lấy role từ token
+    const partnerId = req.params.partnerId;
 
-    const messages = await ChatModel.getConversation(userId1, userId2);
+    // Truyền role vào để Model biết cách truy vấn theo nhóm
+    const messages = await ChatModel.getConversation(userId, role, partnerId);
 
-    // Format lại dữ liệu thời gian cho giao diện dễ đọc
+    // Format lại lưu thời gian cho giao diện
     const formattedMessages = messages.map((msg) => ({
       ...msg,
       time: new Date(msg.created_at).toLocaleTimeString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       }),
     }));
 
-    // Đánh dấu đã đọc nếu mình là người nhận
-    await ChatModel.markAsRead(userId2, userId1);
+    // Phân luồng đánh dấu đã đọc
+    if (role === "customer") {
+      await ChatModel.markAsReadForCustomer(userId);
+    } else {
+      await ChatModel.markAsRead(partnerId, userId);
+    }
 
     res.json(formattedMessages);
   }),
