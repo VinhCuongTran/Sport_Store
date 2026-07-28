@@ -973,6 +973,7 @@ import Basketball_Cap_Size_Guide from "@/assets/Basketball_Cap_Size_Guide.jpg";
 import clothesSizeGuide from "@/assets/Clothes_Size_Guide.png";
 import Football_Goalkeeper_Size_Guide from "@/assets/Football_Goalkeeper_Size_Guide.png";
 import Helmet_Size_Guide from "@/assets/Helmet_Size_Guide.webp";
+const defaultSizeGuide = ref(false);
 
 const currentSizeGuideImg = computed(() => {
   if (!product.value) return defaultSizeGuide;

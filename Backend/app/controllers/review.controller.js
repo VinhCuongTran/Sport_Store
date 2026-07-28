@@ -28,38 +28,64 @@ const ReviewController = {
       throw new ApiError(400, "Bạn đã đánh giá sản phẩm này rồi!");
     }
 
-    let reviewStatus = "approved";
-    let responseMessage = "Cảm ơn bạn đã đánh giá sản phẩm!";
+    let reviewStatus = "pending";
+    let responseMessage =
+      "Đánh giá của bạn đã được ghi nhận và đang chờ duyệt.";
+    let aiLabel = null;
+    let aiConfidence = null;
+    let aiProbs = null; // Biến lưu phân bổ xác suất
 
-    // MÔ HÌNH MÁY HỌC PHÂN LOẠI
     if (comment && comment.trim() !== "") {
       try {
         const aiResponse = await axios.post("http://localhost:8080/predict", {
           text: comment,
         });
 
-        if (aiResponse.data.prediction === "violation") {
+        aiLabel = aiResponse.data.prediction;
+        aiConfidence = aiResponse.data.probability;
+
+        // Trích xuất và chuyển đổi object probabilities thành chuỗi JSON
+        if (aiResponse.data.probabilities) {
+          aiProbs = JSON.stringify(aiResponse.data.probabilities);
+        }
+
+        if (aiLabel === "valid" && aiConfidence >= 0.8) {
+          reviewStatus = "approved";
+          responseMessage = "Cảm ơn bạn đã đánh giá sản phẩm!";
+        } else if (aiLabel === "violation" && aiConfidence >= 0.9) {
+          reviewStatus = "rejected";
+          responseMessage =
+            "Đánh giá của bạn vi phạm tiêu chuẩn cộng đồng và đã bị từ chối.";
+        } else {
           reviewStatus = "pending";
           responseMessage =
-            "Đánh giá của bạn chứa từ ngữ nhạy cảm và đang được chờ Admin kiểm duyệt.";
+            "Đánh giá của bạn chứa nội dung cần xác minh, đang chờ Admin kiểm duyệt.";
         }
       } catch (aiError) {
-        console.error(
-          "Lỗi khi kết nối với AI Model, tự động pass:",
-          aiError.message,
-        );
+        console.error("Lỗi khi kết nối với AI Model:", aiError.message);
+        reviewStatus = "pending";
+        responseMessage = "Đánh giá của bạn đang được hệ thống xử lý.";
       }
+    } else {
+      reviewStatus = "approved";
+      responseMessage = "Cảm ơn bạn đã đánh giá sản phẩm!";
     }
 
+    // Truyền thêm ai_probs vào Model
     const id = await ReviewModel.create({
       product_id,
       user_id,
       rating,
       comment,
       status: reviewStatus,
+      ai_label: aiLabel,
+      ai_confidence: aiConfidence,
+      ai_probs: aiProbs,
     });
 
-    res.status(201).json({ message: responseMessage, id });
+    res
+      .status(201)
+      .json({ message: responseMessage, id, status: reviewStatus });
   }),
 
   findAll: asyncHandler(async (req, res) => {
@@ -81,8 +107,8 @@ const ReviewController = {
 
     await ActivityLog.logAction(
       req.user.id,
-      "UPDATE_REVIEW",
-      `Đã đổi trạng thái đánh giá thành ${status}`,
+      "UPDATE_REVIEW_STATUS",
+      `Admin đã đổi trạng thái đánh giá thành ${status} (Duyệt thủ công)`,
       id,
     );
     res.json({ message: "Cập nhật trạng thái thành công" });

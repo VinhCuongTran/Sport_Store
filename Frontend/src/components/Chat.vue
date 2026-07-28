@@ -1,6 +1,6 @@
 <template>
   <div ref="chatContainerRef">
-    <button class="chat-toggle-btn" v-if="!isOpen" @click="isOpen = true">
+    <button class="chat-toggle-btn" v-if="!isOpen && isLoggedIn" @click="isOpen = true">
       <span class="btn-inner">
         <span class="btn-icon-wrap">
           <v-icon color="white" size="small"
@@ -53,7 +53,7 @@
             :key="contact.id"
             :value="contact.id"
             :active="activeContact?.id == contact.id"
-            active-color="black"
+            color="black"
             class="chat-contact-item border-b px-4 py-3"
             @click="selectContact(contact)"
           >
@@ -409,6 +409,11 @@ const filteredContacts = computed(() => {
   );
 });
 
+const isLoggedIn = computed(() => {
+  const token = localStorage.getItem("token") || localStorage.getItem("accessToken");
+  return token;
+});
+
 const totalUnread = computed(() => {
   if (!isAdmin.value) return activeContact.value?.unread || 0;
   return contacts.value.reduce((sum, c) => sum + (c.unread || 0), 0);
@@ -425,6 +430,22 @@ const goToOrder = (orderId) => {
 };
 
 const loadContacts = async () => {
+  // Nếu là khách vãng lai (chưa đăng nhập hoặc không có token), 
+  // ta bỏ qua việc gọi API lấy danh sách liên hệ để tránh lỗi 401.
+  const token = localStorage.getItem("token") || localStorage.getItem("accessToken");
+  if (!token || currentUser.value.name === "Khách") {
+    // Thiết lập khung chat mặc định cho khách vãng lai có thể nhắn tin trực tiếp với shop (ID shop mặc định ví dụ là 1)
+    activeContact.value = {
+      id: 1,
+      name: "Chăm sóc khách hàng",
+      avatar: "https://placehold.co/100?text=CSKH",
+      is_online: true,
+      unread: 0,
+    };
+    messages.value = [];
+    return;
+  }
+
   try {
     const res = await api.get("/chats/contacts");
     contacts.value = res.data || [];

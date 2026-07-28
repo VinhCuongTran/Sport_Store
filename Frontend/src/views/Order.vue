@@ -670,7 +670,7 @@
           <div class="d-flex justify-end text-caption mb-4">
             <span
               :class="
-                wordCount < 50 || wordCount > 500
+                wordCount > 500
                   ? 'text-grey font-weight-medium'
                   : 'text-success font-weight-bold'
               "
@@ -885,9 +885,6 @@ const validateReviewContent = (text) => {
 
   // 1. Kiểm tra độ dài từ (Tối thiểu 20, Tối đa 500)
   const count = wordCount.value;
-  if (count < 20) {
-    return `Nội dung quá ngắn. Cần tối thiểu 20 từ (Hiện tại: ${count} từ).`;
-  }
   if (count > 500) {
     return `Đánh giá vượt quá giới hạn (Tối đa 500 từ).`;
   }
@@ -900,7 +897,8 @@ const validateReviewContent = (text) => {
   }
 
   // 3. Kiểm tra Link cơ bản
-  const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi;
+  const urlRegex =
+    /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9-]+\.(com|vn|me|net)(\/[^\s]*)?)/gi;
   if (urlRegex.test(text)) {
     return "Hệ thống đã chặn: Không chèn các đường dẫn (Link) vào đánh giá.";
   }

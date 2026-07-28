@@ -58,11 +58,19 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-        alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        // Chỉ hiện alert và bắt đăng nhập lại nếu người dùng có lưu token cũ (tức là đã từng đăng nhập nhưng bị hết hạn thật)
+        const hasOldToken =
+          localStorage.getItem("token") || localStorage.getItem("refreshToken");
+        if (hasOldToken) {
+          alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        }
+
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("user");
-        window.location.href = "/login";
+
+        // Chỉ chuyển hướng về trang login nếu route hiện tại yêu cầu đăng nhập (tránh ép văng khỏi trang chủ)
+        // Hoặc bạn có thể giữ nguyên window.location.href nếu toàn bộ các trang xem sản phẩm của bạn không bị gắn middleware bảo vệ nhầm ở Backend.
         return Promise.reject(refreshError);
       }
     }
