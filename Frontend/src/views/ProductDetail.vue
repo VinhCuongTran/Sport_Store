@@ -284,18 +284,22 @@
               </div>
               <div class="size-grid">
                 <v-btn
-                  v-for="size in availableSizes"
-                  :key="size"
-                  :variant="selectedSize === size ? 'flat' : 'outlined'"
-                  :color="selectedSize === size ? 'black' : 'grey-lighten-1'"
-                  class="size-btn text-uppercase font-weight-bold"
-                  :class="{ 'text-black': selectedSize !== size }"
+                  v-for="item in availableSizes"
+                  :key="item.size"
+                  :variant="selectedSize === item.size ? 'flat' : 'outlined'"
+                  :color="selectedSize === item.size ? 'black' : 'grey-lighten-1'"
+                  class="size-btn text-uppercase font-weight-bold position-relative"
+                  :class="{
+                    'text-black': selectedSize !== item.size && !item.isOutOfStock,
+                    'out-of-stock-size': item.isOutOfStock
+                  }"
                   rounded="0"
                   elevation="0"
                   height="48"
-                  @click="selectedSize = size"
+                  :disabled="item.isOutOfStock"
+                  @click="selectedSize = item.size"
                 >
-                  {{ size }}
+                  {{ item.size }}
                 </v-btn>
               </div>
             </div>
@@ -1162,7 +1166,7 @@ const getColorImages = (color) => {
 
 const selectColor = (color) => {
   selectedColor.value = color;
-  selectedSize.value = null;
+  selectedSize.value = null; // Reset size khi đổi màu
 
   currentGallery.value = getColorImages(color);
   setMainImage(currentGallery.value[0], 0);
@@ -1175,11 +1179,28 @@ const setMainImage = (img, index) => {
 };
 
 const availableSizes = computed(() => {
-  const sizes = (product.value?.variants || [])
-    .filter((v) => v.color === selectedColor.value)
-    .map((v) => v.size);
-  return sizes.sort(sortSizes);
+  // Lấy tất cả các variant có màu đang chọn (cả còn hàng lẫn hết hàng)
+  const variantsForColor = (product.value?.variants || []).filter(
+    (v) => v.color === selectedColor.value
+  );
+
+  // Gộp danh sách size và kiểm tra xem tổng tồn kho của size đó (theo màu) có > 0 không
+  const sizeMap = new Map();
+  variantsForColor.forEach((v) => {
+    const currentStock = sizeMap.get(v.size) || 0;
+    sizeMap.set(v.size, currentStock + Number(v.stock || 0));
+  });
+
+  // Chuyển thành array object để tiện sort và hiển thị UI
+  const sizes = Array.from(sizeMap.entries()).map(([size, stock]) => ({
+    size,
+    isOutOfStock: stock <= 0,
+  }));
+
+  // Dùng lại hàm sortSizes của bạn
+  return sizes.sort((a, b) => sortSizes(a.size, b.size));
 });
+
 const selectedVariant = computed(() =>
   (product.value?.variants || []).find(
     (v) => v.color === selectedColor.value && v.size === selectedSize.value,
@@ -1642,5 +1663,39 @@ watch(
   max-width: 250px;
   display: inline-block;
   vertical-align: bottom;
+}
+
+/* Styling cho Size bị hết hàng */
+.out-of-stock-size {
+  opacity: 0.45 !important;
+  pointer-events: none;
+  background-color: #f5f5f5 !important;
+  color: #9e9e9e !important;
+  border-color: #e0e0e0 !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Tạo đường gạch chéo (hoặc X) phía trên ô size hết hàng */
+.out-of-stock-size::before,
+.out-of-stock-size::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 1.5px !important;
+  background-color: #d32f2f !important; /* Màu đỏ cho dễ nhận biết hết hàng */
+  z-index: 1 !important;
+}
+
+/* Đường chéo từ góc trên-trái xuống dưới-phải */
+.out-of-stock-size::before {
+  transform: rotate(25deg);
+}
+
+/* Đường chéo từ góc dưới-trái lên trên-phải (tạo thành chữ X) */
+.out-of-stock-size::after {
+  transform: rotate(-25deg);
 }
 </style>

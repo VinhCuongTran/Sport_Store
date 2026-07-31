@@ -702,13 +702,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import OrderService from "@/services/order.service";
 import ReviewService from "@/services/review.service";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
+import { useRoute, useRouter } from "vue-router";
 // IMPORT COMPONENT CHAT BẠN VỪA LÀM
 import ChatBox from "@/components/Chat.vue";
+
+const route = useRoute();
+const router = useRouter();
 
 const confirmDialog = ref(null);
 // Khai báo một ref để tham chiếu đến ChatBox
@@ -774,12 +778,39 @@ const fetchOrders = async () => {
     }
     const user = JSON.parse(userStr);
     orders.value = await OrderService.getByUser(user.id);
+
+    // -> GỌI HÀM KIỂM TRA MỞ DIALOG SAU KHI LOAD XONG DANH SÁCH ĐƠN HÀNG
+    checkAndOpenOrderFromUrl();
   } catch (error) {
     console.error("Lỗi tải đơn hàng:", error);
   } finally {
     isLoading.value = false;
   }
 };
+
+// -> THÊM WATCH ĐỂ LẮNG NGHE KHI URL THAY ĐỔI QUERY ?open_order=...
+watch(
+  () => route.query.open_order,
+  (newOrderId) => {
+    if (newOrderId) {
+      viewDetail(newOrderId);
+    }
+  }
+);
+
+watch(dialogDetail, (isOpen) => {
+  // Nếu dialog vừa đóng (isOpen === false) và trên URL đang có tham số open_order
+  if (!isOpen && route.query.open_order) {
+    // Tách bỏ open_order ra khỏi danh sách query trên URL
+    const { open_order, ...restQuery } = route.query;
+
+    // Dùng router.replace để làm sạch URL về /orders (không tạo thêm lịch sử trang web)
+    router.replace({
+      path: route.path,
+      query: restQuery,
+    });
+  }
+});
 
 const viewDetail = async (orderId) => {
   try {
@@ -791,6 +822,14 @@ const viewDetail = async (orderId) => {
       "Không thể tải chi tiết đơn hàng lúc này.",
       { isAlert: true, iconColor: "red" },
     );
+  }
+};
+
+// --- THÊM HÀM NÀY VÀO ĐÂY ---
+const checkAndOpenOrderFromUrl = () => {
+  const targetOrderId = route.query.open_order;
+  if (targetOrderId) {
+    viewDetail(targetOrderId);
   }
 };
 
@@ -976,6 +1015,7 @@ const submitReview = async () => {
     isSubmittingReview.value = false;
   }
 };
+
 const gotoChat = (orderId) => {
   if (chatBoxRef.value) {
     // Gọi hàm mở hộp thoại bên trong Chat.vue

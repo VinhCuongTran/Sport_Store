@@ -31,7 +31,7 @@ const server = http.createServer(app);
 // Cấu hình Socket.io
 io = new Server(server, {
   cors: {
-    origin: ["http://localhost:3001", "http://localhost:5173"], // Hỗ trợ cả 2 port Frontend
+    origin: "*", // Cho phép mọi nguồn (bao gồm cả các thiết bị truy cập qua IP LAN) kết nối vào
     methods: ["GET", "POST", "PUT", "DELETE"],
   },
 });

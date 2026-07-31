@@ -94,45 +94,98 @@
                 </v-btn>
               </template>
 
+              <!-- BÊN TRONG <v-menu offset-y ... v-model="notiMenuOpen"> -->
               <v-card
-                width="350"
-                max-height="400"
-                class="overflow-y-auto hide-scrollbar"
+                width="360"
+                max-height="450"
+                class="d-flex flex-column rounded-lg"
               >
+                <!-- TIÊU ĐỀ -->
                 <v-card-title
-                  class="text-subtitle-1 font-weight-bold border-b py-3 bg-grey-lighten-4"
+                  class="text-subtitle-1 font-weight-bold border-b py-3 bg-grey-lighten-4 d-flex justify-space-between align-center"
                 >
-                  Thông báo của bạn
+                  <span>Thông báo của bạn</span>
+                  <v-chip
+                    v-if="unreadCount > 0"
+                    size="x-small"
+                    color="red"
+                    class="font-weight-bold"
+                  >
+                    {{ unreadCount }} mới
+                  </v-chip>
                 </v-card-title>
-                <v-list density="compact" class="pa-0">
+
+                <!-- DANH SÁCH THÔNG BÁO (chỉ hiển thị tối đa 5 items) -->
+                <v-list
+                  density="compact"
+                  class="pa-0 overflow-y-auto hide-scrollbar"
+                  style="max-height: 320px"
+                >
                   <v-list-item
                     v-if="notifications.length === 0"
-                    class="pa-4 text-center text-grey"
+                    class="pa-6 text-center text-grey"
                   >
                     Không có thông báo nào
                   </v-list-item>
+
+                  <!-- Dùng .slice(0, 5) để chỉ render 5 thông báo đầu tiên -->
                   <v-list-item
-                    v-for="noti in notifications"
+                    v-for="noti in notifications.slice(0, 5)"
                     :key="noti.id"
-                    :class="{ 'bg-blue-grey-lighten-5': !noti.is_read }"
+                    :class="!noti.is_read ? 'bg-blue-lighten-5' : 'bg-white'"
                     @click="handleNotificationClick(noti)"
-                    class="border-b py-2 pointer-cursor"
+                    class="border-b py-3 pointer-cursor"
                   >
                     <template v-slot:prepend>
-                      <v-icon :color="!noti.is_read ? 'primary' : 'grey'"
-                        >mdi-bell-ring</v-icon
+                      <v-avatar
+                        :color="!noti.is_read ? 'primary' : 'grey-lighten-2'"
+                        size="36"
+                        class="mr-2"
                       >
+                        <v-icon
+                          :color="!noti.is_read ? 'white' : 'grey-darken-2'"
+                          size="18"
+                        >
+                          mdi-bell-ring
+                        </v-icon>
+                      </v-avatar>
                     </template>
+
                     <v-list-item-title
-                      class="font-weight-bold text-subtitle-2 text-wrap"
-                      >{{ noti.title }}</v-list-item-title
+                      class="text-subtitle-2 text-wrap mb-1"
+                      :class="
+                        !noti.is_read
+                          ? 'font-weight-bold text-primary'
+                          : 'font-weight-medium text-grey-darken-3'
+                      "
                     >
+                      {{ noti.title }}
+                    </v-list-item-title>
+
                     <v-list-item-subtitle
-                      class="text-caption text-grey-darken-1 text-wrap mt-1"
-                      >{{ noti.message }}</v-list-item-subtitle
+                      class="text-caption text-grey-darken-1 text-wrap"
                     >
+                      {{ noti.message }}
+                    </v-list-item-subtitle>
                   </v-list-item>
                 </v-list>
+
+                <!-- NÚT XEM TẤT CẢ CỐ ĐỊNH Ở DƯỚI CÙNG -->
+                <v-divider></v-divider>
+                <v-card-actions class="pa-2 bg-grey-lighten-5 justify-center">
+                  <v-btn
+                    variant="text"
+                    color="primary"
+                    class="text-none font-weight-bold w-100"
+                    to="/notifications"
+                    @click="notiMenuOpen = false"
+                  >
+                    Xem tất cả thông báo
+                    <v-icon right size="18" class="ml-1"
+                      >mdi-arrow-right</v-icon
+                    >
+                  </v-btn>
+                </v-card-actions>
               </v-card>
             </v-menu>
           </template>
@@ -600,9 +653,14 @@ watch(
 );
 
 const getNotificationRoute = (noti) => {
+  // Lấy ID đơn hàng từ noti.reference_id (hoặc noti.order_id tuỳ cấu trúc backend trả về)
+  const targetId = noti.reference_id || noti.order_id;
+
   switch (noti.type) {
     case "order":
-      return `/orders`;
+    case "new_order":
+      // Nếu có ID đơn hàng thì truyền kèm ?open_order=...
+      return targetId ? `/orders?open_order=${targetId}` : `/orders`;
     case "new_product":
       return `/products/${noti.reference_id}`;
     case "system":
@@ -617,6 +675,7 @@ const getNotificationRoute = (noti) => {
 .hover-red {
   transition: color 0.2s ease;
 }
+
 .hover-red:hover {
   color: #f44336 !important;
 }
@@ -624,54 +683,69 @@ const getNotificationRoute = (noti) => {
 .pointer-cursor {
   cursor: pointer;
 }
+
 .text-wrap {
   white-space: normal !important;
   line-height: 1.4 !important;
 }
+
 .custom-header {
   background-color: #001a2d;
   color: #ffffff;
 }
+
 .custom-header-nav {
   background-color: rgba(0, 0, 0, 0.2);
 }
+
 .hover-green-target {
   transition: color 0.3s ease;
 }
+
 .hover-green-target:hover {
   color: #77e51f !important;
 }
+
 :deep(.v-btn.hover-green-target .v-btn__overlay) {
   background-color: rgba(255, 255, 255, 0.03) !important;
 }
+
 :deep(.v-btn.hover-green-target .v-ripple__animation) {
   background-color: rgba(150, 150, 150, 0.3) !important;
 }
+
 .custom-logo-wrap {
   display: flex;
   align-items: center;
   gap: 12px;
 }
+
 .custom-logo-img {
   height: 40px;
   border-radius: 6px;
 }
+
 .custom-logo-text {
   font-size: 24px;
 }
+
 .gap-2 {
   gap: 8px;
 }
+
 .gap-4 {
   gap: 16px;
 }
+
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .mic-pulse-wrapper {
   position: relative;
   width: 160px;
@@ -681,6 +755,7 @@ const getNotificationRoute = (noti) => {
   justify-content: center;
   margin: 0 auto;
 }
+
 .mic-pulse-ring {
   position: absolute;
   width: 90px;
@@ -690,6 +765,7 @@ const getNotificationRoute = (noti) => {
   transition: transform 0.05s linear;
   box-shadow: 0 0 30px rgba(255, 82, 82, 0.4);
 }
+
 .mic-avatar {
   z-index: 2;
   border: 4px solid rgba(255, 255, 255, 0.1);

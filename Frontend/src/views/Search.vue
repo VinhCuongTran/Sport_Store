@@ -252,7 +252,7 @@ const executeSearch = async () => {
     if (!searchState.imageFile) return;
 
     try {
-      isLoading.value = true; 
+      isLoading.value = true;
 
       // 1. Nén ảnh xuống tối đa 512px
       const compressedFile = await compressImage(searchState.imageFile, 512);
@@ -260,7 +260,7 @@ const executeSearch = async () => {
       const aiConfig = {
         // Trỏ về thư mục public/models/ của dự án (Tốc độ tải gần như tức thì)
         //publicPath: window.location.origin + "/Models/",
-        model: "small" // Vẫn dùng model nhỏ nhẹ
+        model: "small", // Vẫn dùng model nhỏ nhẹ
       };
 
       // 2. Tách nền bằng AI VỚI CẤU HÌNH SIÊU TỐC
@@ -284,7 +284,7 @@ const executeSearch = async () => {
 
       // 4. Xuất ảnh JPEG sạch
       const whiteBgBlob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.95)
+        canvas.toBlob(resolve, "image/jpeg", 0.95),
       );
       const processedFile = new File([whiteBgBlob], "product-clean.jpg", {
         type: "image/jpeg",
@@ -297,11 +297,12 @@ const executeSearch = async () => {
       const formData = new FormData();
       formData.append("image", processedFile);
 
+      const hostname = window.location.hostname;
       const response = await axios.post(
-        "http://localhost:3000/api/search/image",
-        formData
+        `http://${hostname}:3000/api/search/image`,
+        formData,
       );
-      
+
       if (response.data.success) {
         searchState.results = response.data.products.map(normalizeProductData);
       }
@@ -319,7 +320,8 @@ const executeSearch = async () => {
 
     try {
       isLoading.value = true;
-      const response = await axios.get("http://localhost:3000/api/products", {
+      const hostname = window.location.hostname;
+      const response = await axios.get(`http://${hostname}:3000/api/products`, {
         params: { search: q },
       });
       const rawProducts = response.data.products || response.data;

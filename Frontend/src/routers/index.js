@@ -152,6 +152,12 @@ const routes = [
         meta: { requiresAuth: true },
       },
       {
+        path: "notifications",
+        name: "notifications",
+        component: () => import("../views/NotificationView.vue"),
+        meta: { requiresAuth: true },
+      },
+      {
         path: "/:pathMatch(.*)*",
         name: "notfound",
         component: () => import("../views/NotFound.vue"),

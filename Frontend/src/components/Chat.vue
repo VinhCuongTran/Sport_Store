@@ -377,7 +377,7 @@ const isOpen = ref(false);
 const chatContainerRef = ref(null);
 const router = useRouter();
 
-const SOCKET_URL = "http://localhost:3000";
+const SOCKET_URL = `http://${window.location.hostname}:3000`;
 let socket = null;
 
 const currentUser = ref(

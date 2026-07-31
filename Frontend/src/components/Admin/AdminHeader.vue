@@ -67,53 +67,51 @@
           </v-chip>
         </v-card-title>
         <v-divider></v-divider>
-        <v-list lines="two" max-height="400" class="overflow-y-auto pa-0">
-          <v-list-item
-            v-if="notifications.length === 0"
-            class="text-center pa-4 text-grey"
-          >
-            Không có thông báo nào
-          </v-list-item>
-          <v-list-item
-            v-for="notify in notifications"
-            :key="notify.id"
-            :class="{ 'bg-grey-lighten-4': !notify.is_read }"
-            @click="handleNotificationClick(notify)"
-            link
-          >
-            <template v-slot:prepend>
-              <v-avatar
-                :color="notify.type === 'new_order' ? 'success' : 'primary'"
-                size="36"
-              >
-                <v-icon color="white" size="20">
-                  {{
-                    notify.type === "new_order"
-                      ? "mdi-shopping"
-                      : "mdi-bell-outline"
-                  }}
-                </v-icon>
-              </v-avatar>
-            </template>
-            <v-list-item-title
-              class="text-subtitle-2 font-weight-bold mb-1"
-              :class="{
-                'text-black': !notify.is_read,
-                'text-grey-darken-2': notify.is_read,
-              }"
-            >
-              {{ notify.title }}
-            </v-list-item-title>
-            <v-list-item-subtitle class="text-caption">
-              {{ notify.message }}
-            </v-list-item-subtitle>
-            <template v-slot:append>
-              <v-icon v-if="!notify.is_read" color="blue-lighten-1" size="12"
-                >mdi-circle</v-icon
-              >
-            </template>
-          </v-list-item>
-        </v-list>
+        <!-- BÊN TRONG MENU THÔNG BÁO ADMIN -->
+<v-list lines="two" max-height="400" class="overflow-y-auto pa-0">
+  <v-list-item
+    v-if="notifications.length === 0"
+    class="text-center pa-4 text-grey"
+  >
+    Không có thông báo nào
+  </v-list-item>
+
+  <!-- Thay đổi màu nền: bg-amber-lighten-5 (chưa đọc) vs bg-white (đã đọc) -->
+  <v-list-item
+    v-for="notify in notifications"
+    :key="notify.id"
+    :class="!notify.is_read ? 'bg-amber-lighten-5' : 'bg-white'"
+    @click="handleNotificationClick(notify)"
+    class="border-b py-2"
+    link
+  >
+    <template v-slot:prepend>
+      <v-avatar
+        :color="notify.type === 'new_order' ? 'success' : 'primary'"
+        size="36"
+      >
+        <v-icon color="white" size="18">
+          {{ notify.type === "new_order" ? "mdi-shopping" : "mdi-bell-outline" }}
+        </v-icon>
+      </v-avatar>
+    </template>
+
+    <v-list-item-title
+      class="text-subtitle-2 mb-1"
+      :class="!notify.is_read ? 'font-weight-black text-black' : 'font-weight-regular text-grey-darken-3'"
+    >
+      {{ notify.title }}
+    </v-list-item-title>
+
+    <v-list-item-subtitle class="text-caption text-grey-darken-2">
+      {{ notify.message }}
+    </v-list-item-subtitle>
+
+    <template v-slot:append>
+      <v-icon v-if="!notify.is_read" color="red-darken-1" size="10">mdi-circle</v-icon>
+    </template>
+  </v-list-item>
+</v-list>
       </v-card>
     </v-menu>
 

@@ -7,8 +7,13 @@ const commonConfig = {
   },
 };
 
+const getBaseURL = () => {
+  const hostname = window.location.hostname; // Lấy động localhost hoặc 192.168.x.x
+  return `http://${hostname}:3000/api`;
+};
+
 const api = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL: getBaseURL(),
   ...commonConfig,
 });
 
@@ -46,12 +51,10 @@ api.interceptors.response.use(
         if (!refreshToken) {
           throw new Error("Không có Refresh Token");
         }
-        const res = await axios.post(
-          "http://localhost:3000/api/auth/refresh-token",
-          {
-            refreshToken: refreshToken,
-          },
-        );
+        // Sửa từ axios.post thành api.post để nó tự động dùng chung baseURL động
+        const res = await api.post("/auth/refresh-token", {
+          refreshToken: refreshToken,
+        });
         const newAccessToken = res.data.accessToken;
         localStorage.setItem("token", newAccessToken);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
