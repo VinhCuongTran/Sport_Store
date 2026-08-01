@@ -308,14 +308,17 @@ const OrderController = {
     const paymentFlow = {
       unpaid: ["paid"],
       paid: ["refunded"],
-      refunded: [] // Đã hoàn tiền thì không đổi đi đâu được nữa
+      refunded: [], // Đã hoàn tiền thì không đổi đi đâu được nữa
     };
 
     if (payment_status !== oldPaymentStatus) {
-      if (!paymentFlow[oldPaymentStatus] || !paymentFlow[oldPaymentStatus].includes(payment_status)) {
+      if (
+        !paymentFlow[oldPaymentStatus] ||
+        !paymentFlow[oldPaymentStatus].includes(payment_status)
+      ) {
         throw new ApiError(
           400,
-          `Lỗi thao tác: Không thể chuyển trạng thái thanh toán từ '${oldPaymentStatus}' sang '${payment_status}'`
+          `Lỗi thao tác: Không thể chuyển trạng thái thanh toán từ '${oldPaymentStatus}' sang '${payment_status}'`,
         );
       }
     }
