@@ -53,10 +53,10 @@
         </template>
 
         <template v-slot:item.order_id="{ item }">
-          <v-btn variant="text" color="blue-darken-2" size="small" class="font-weight-bold text-none px-2" :to="{ name: 'admin-order', query: { search: item.order_id } }">
-            #{{ item.order_id }}
-          </v-btn>
-        </template>
+  <v-btn variant="text" color="blue-darken-2" size="small" class="font-weight-bold text-none px-2" :to="{ name: 'admin-order', query: { open_order: item.order_id } }">
+    #{{ item.order_id }}
+  </v-btn>
+</template>
 
         <template v-slot:item.transaction_type="{ item }">
           <v-chip size="small" :color="item.transaction_type === 'payment' ? 'success' : 'red-darken-2'" variant="flat" class="font-weight-bold text-uppercase">

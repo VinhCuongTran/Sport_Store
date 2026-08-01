@@ -284,6 +284,42 @@ const OrderController = {
     const oldStatus = order.status;
     const oldPaymentStatus = order.payment_status;
 
+    // --- BẮT ĐẦU ĐOẠN MÃ THÊM MỚI ---
+    // Định nghĩa luồng trạng thái hợp lệ (chỉ được tiến tới hoặc huỷ)
+    const statusFlow = {
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["shipping", "cancelled"],
+      shipping: ["completed", "cancelled"],
+      completed: [], // Đã hoàn thành thì không được đổi đi đâu nữa
+      cancelled: [], // Đã huỷ thì không được phục hồi bằng API này
+    };
+
+    // Kiểm tra tính hợp lệ nếu trạng thái bị thay đổi
+    if (status !== oldStatus) {
+      if (!statusFlow[oldStatus] || !statusFlow[oldStatus].includes(status)) {
+        throw new ApiError(
+          400,
+          `Lỗi logic: Không thể chuyển trạng thái đơn hàng từ '${oldStatus}' sang '${status}'`,
+        );
+      }
+    }
+    // --- KẾT THÚC ĐOẠN MÃ THÊM MỚI ---
+
+    const paymentFlow = {
+      unpaid: ["paid"],
+      paid: ["refunded"],
+      refunded: [] // Đã hoàn tiền thì không đổi đi đâu được nữa
+    };
+
+    if (payment_status !== oldPaymentStatus) {
+      if (!paymentFlow[oldPaymentStatus] || !paymentFlow[oldPaymentStatus].includes(payment_status)) {
+        throw new ApiError(
+          400,
+          `Lỗi thao tác: Không thể chuyển trạng thái thanh toán từ '${oldPaymentStatus}' sang '${payment_status}'`
+        );
+      }
+    }
+
     const isUpdated = await OrderModel.updateStatus(
       orderId,
       status,
@@ -291,14 +327,14 @@ const OrderController = {
       staff_id,
     );
     if (isUpdated) {
-      let actionName = 'UPDATE_ORDER';
-      if (status === 'cancelled') actionName = 'CANCEL_ORDER';
-      
+      let actionName = "UPDATE_ORDER";
+      if (status === "cancelled") actionName = "CANCEL_ORDER";
+
       await ActivityLog.logAction(
-        staff_id, 
-        actionName, 
-        `Đã chuyển trạng thái đơn hàng #${orderId} thành ${status}`, 
-        orderId
+        staff_id,
+        actionName,
+        `Đã chuyển trạng thái đơn hàng #${orderId} thành ${status}`,
+        orderId,
       );
     }
 

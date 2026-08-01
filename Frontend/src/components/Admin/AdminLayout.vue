@@ -38,7 +38,7 @@
           ></v-list-item>
           <v-list-item
             prepend-icon="mdi-cash-multiple"
-            title="Dòng tiền"
+            title="Quản lý dòng tiền"
             :to="{ name: 'admin-transaction' }"
             exact
             color="white"
@@ -180,7 +180,7 @@
         ></v-list-item>
         <v-list-item
           prepend-icon="mdi-clipboard-check-outline"
-          title="Tạo Phiếu Kiểm Kho"
+          title="Quản lý phiếu nhập kho"
           :to="{ name: 'admin-stock-take' }"
           exact
           color="blue-lighten-1"

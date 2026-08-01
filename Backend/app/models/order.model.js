@@ -46,16 +46,26 @@ const Order = {
           [orderItemsData],
         );
 
+        // --- BẮT ĐẦU ĐOẠN ĐÃ SỬA CÓ THÊM WHERE VÀ CHECK STOCK ---
         for (const item of items) {
           if (item.variant_id) {
-            await connection.query(
+            const [updateResult] = await connection.query(
               `UPDATE product_variants 
                SET stock = stock - ?, 
-               reserved_stock = reserved_stock + ?`,
-              [item.quantity, item.quantity],
+               reserved_stock = reserved_stock + ?
+               WHERE id = ? AND stock >= ?`,
+              [item.quantity, item.quantity, item.variant_id, item.quantity],
             );
+
+            // Kiểm tra nếu không có dòng nào được cập nhật (nghĩa là kho không đủ hoặc sai ID)
+            if (updateResult.affectedRows === 0) {
+              throw new Error(
+                `Sản phẩm đã hết hàng hoặc không đủ số lượng trong kho do có người vừa đặt trước.`,
+              );
+            }
           }
         }
+        // --- KẾT THÚC ĐOẠN ĐÃ SỬA ---
       }
 
       // Tăng lượt sử dụng cho Voucher Sản phẩm
@@ -190,13 +200,20 @@ const Order = {
 
       for (const item of items) {
         if (item.variant_id) {
-          await connection.query(
+          const [updateResult] = await connection.query(
             `UPDATE product_variants 
-       SET stock = stock + ?, 
-           reserved_stock = reserved_stock - ? 
-       WHERE id = ?`,
-            [item.quantity, item.quantity, item.variant_id],
+             SET stock = stock + ?, 
+             reserved_stock = reserved_stock - ? 
+             WHERE id = ?`,
+            [item.quantity, item.quantity, item.variant_id], // Bỏ bot 1 tham số item.quantity ở cuối
           );
+
+          // Báo lỗi cho đúng ngữ cảnh hoàn kho
+          if (updateResult.affectedRows === 0) {
+            throw new Error(
+              `Lỗi hệ thống: Không thể hoàn trả kho cho phân loại sản phẩm ID "${item.variant_id}".`,
+            );
+          }
         }
       }
 

@@ -227,16 +227,67 @@
                     class="text-caption font-weight-bold text-indigo-darken-3 mb-1 d-block"
                     >Trạng thái đơn hàng</label
                   >
+                  <!-- BẮT ĐẦU ĐOẠN MÃ MỚI -->
                   <select
                     v-model="statusForm.status"
                     class="custom-input text-black"
+                    :disabled="
+                      ['completed', 'cancelled'].includes(selectedOrder?.status)
+                    "
+                    :class="{
+                      'bg-grey-lighten-3 text-grey-darken-1': [
+                        'completed',
+                        'cancelled',
+                      ].includes(selectedOrder?.status),
+                    }"
                   >
-                    <option value="pending">Chờ xác nhận</option>
-                    <option value="confirmed">Đã xác nhận</option>
-                    <option value="shipping">Đang giao hàng</option>
-                    <option value="completed">Giao thành công</option>
-                    <option value="cancelled">Đã hủy</option>
+                    <option
+                      value="pending"
+                      :disabled="
+                        [
+                          'confirmed',
+                          'shipping',
+                          'completed',
+                          'cancelled',
+                        ].includes(selectedOrder?.status)
+                      "
+                    >
+                      Chờ xác nhận
+                    </option>
+                    <option
+                      value="confirmed"
+                      :disabled="
+                        ['shipping', 'completed', 'cancelled'].includes(
+                          selectedOrder?.status,
+                        )
+                      "
+                    >
+                      Đã xác nhận
+                    </option>
+                    <option
+                      value="shipping"
+                      :disabled="
+                        ['completed', 'cancelled'].includes(
+                          selectedOrder?.status,
+                        )
+                      "
+                    >
+                      Đang giao hàng
+                    </option>
+                    <option
+                      value="completed"
+                      :disabled="['cancelled'].includes(selectedOrder?.status)"
+                    >
+                      Giao thành công
+                    </option>
+                    <option
+                      value="cancelled"
+                      :disabled="selectedOrder?.status === 'completed'"
+                    >
+                      Đã hủy
+                    </option>
                   </select>
+                  <!-- KẾT THÚC ĐOẠN MÃ MỚI -->
                 </div>
 
                 <div>
@@ -244,26 +295,43 @@
                     class="text-caption font-weight-bold text-indigo-darken-3 mb-1 d-block"
                   >
                     Trạng thái thanh toán
-                    <span
-                      v-if="statusForm.status === 'completed'"
-                      class="text-green-darken-2 text-caption ml-1"
-                    >
-                      (Đã tự động cập nhật)
-                    </span>
                   </label>
+                  <!-- BẮT ĐẦU ĐOẠN MÃ MỚI -->
                   <select
                     v-model="statusForm.payment_status"
                     class="custom-input text-black"
-                    :disabled="statusForm.status === 'completed'"
+                    :disabled="
+                      statusForm.status === 'completed' ||
+                      selectedOrder?.status === 'completed' ||
+                      selectedOrder?.payment_status === 'refunded'
+                    "
                     :class="{
                       'bg-grey-lighten-3 text-grey-darken-1':
-                        statusForm.status === 'completed',
+                        statusForm.status === 'completed' ||
+                        selectedOrder?.status === 'completed' ||
+                        selectedOrder?.payment_status === 'refunded',
                     }"
                   >
-                    <option value="unpaid">Chưa thanh toán</option>
-                    <option value="paid">Đã thanh toán</option>
-                    <option value="refunded">Đã hoàn tiền</option>
+                    <option
+                      value="unpaid"
+                      :disabled="selectedOrder?.payment_status !== 'unpaid'"
+                    >
+                      Chưa thanh toán
+                    </option>
+                    <option
+                      value="paid"
+                      :disabled="selectedOrder?.payment_status === 'refunded'"
+                    >
+                      Đã thanh toán
+                    </option>
+                    <option
+                      value="refunded"
+                      :disabled="selectedOrder?.payment_status !== 'paid'"
+                    >
+                      Đã hoàn tiền
+                    </option>
                   </select>
+                  <!-- KẾT THÚC ĐOẠN MÃ MỚI -->
                 </div>
               </div>
             </v-col>
@@ -368,7 +436,11 @@
         <v-card-actions class="px-6 py-4 gap-3 bg-white">
           <!-- THÊM NÚT IN TẠI ĐÂY -->
           <v-btn
-            v-if="['confirmed', 'shipping', 'completed'].includes(selectedOrder.status)"
+            v-if="
+              ['confirmed', 'shipping', 'completed'].includes(
+                selectedOrder.status,
+              )
+            "
             color="green-darken-3"
             variant="tonal"
             rounded="lg"
@@ -577,9 +649,9 @@ const updateStatus = async () => {
 const printExportTicket = () => {
   const order = selectedOrder.value;
   if (!order) return;
-  
+
   const today = new Date();
-  let rows = '';
+  let rows = "";
   let totalQty = 0;
 
   order.items.forEach((item, index) => {
@@ -596,7 +668,7 @@ const printExportTicket = () => {
     `;
   });
 
-  const printWindow = window.open('', '_blank');
+  const printWindow = window.open("", "_blank");
   printWindow.document.write(`
     <html>
       <head>
@@ -703,9 +775,8 @@ watch(
       // Xóa query trên URL sau khi mở xong để reset trạng thái
       router.replace({ query: {} });
     }
-  }
+  },
 );
-
 
 onMounted(() => fetchOrders());
 </script>
