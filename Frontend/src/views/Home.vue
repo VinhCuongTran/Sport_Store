@@ -1,39 +1,18 @@
 <template>
   <div class="home-content">
-    <section class="text-center pt-10 pb-16 bg-white">
-      <section class="banner-section bg-white pt-6 pb-2">
-        <v-container class="pa-0">
-          <div class="clearfix rounded-lg overflow-hidden elevation-2">
-            <router-link
-              to="/products"
-              class="a_tow_slide"
-              title="Bộ sưu tập Rise Beyond"
-            >
-              <picture>
-                <img
-                  width="1920"
-                  height="auto"
-                  src="../assets/banner.jpg"
-                  alt="Bộ sưu tập Rise Beyond"
-                  class="img-responsive center-block w-100 d-block"
-                />
-              </picture>
-            </router-link>
-          </div>
-        </v-container>
-      </section>
+    <section class="text-center pb-16 bg-white">
       <v-container>
         <h1
-          class="text-h3 md:text-h2 font-weight-black text-black mb-4 text-uppercase"
+        class="text-h3 md:text-h2 font-weight-black text-black mb-4 text-uppercase"
         >
-          Bứt phá giới hạn <br class="d-md-none" />
-          Khẳng định bản thân
-        </h1>
-        <p class="text-grey-darken-2 text-subtitle-1 mb-8 max-w-2xl mx-auto">
-          Hệ thống đồ thể thao chính hãng hàng đầu. Cung cấp trang thiết bị,
-          quần áo và phụ kiện xịn xò nhất cho mọi bộ môn.
-        </p>
-        <ProductSlider />
+        Bứt phá giới hạn <br class="d-md-none" />
+        Khẳng định bản thân
+      </h1>
+      <p class="text-grey-darken-2 text-subtitle-1 mb-8 max-w-2xl mx-auto">
+        Hệ thống đồ thể thao chính hãng hàng đầu. Cung cấp trang thiết bị,
+        quần áo và phụ kiện xịn xò nhất cho mọi bộ môn.
+      </p>
+      <ProductSlider />
       </v-container>
     </section>
 
@@ -128,10 +107,6 @@
             >
               Sẵn sàng để tỏa sáng?
             </h2>
-            <p class="text-grey-lighten-2 mb-10 text-h6 font-weight-regular">
-              Đăng ký thành viên để nhận ngay Voucher giảm 20% cho đơn hàng đầu
-              tiên.
-            </p>
             <v-btn
               v-if="!isLoggedIn"
               to="/register"

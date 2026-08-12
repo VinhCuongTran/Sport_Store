@@ -112,17 +112,7 @@
               :model-value="pendingCount > 0"
               floating
             >
-              <v-icon start>mdi-robot-outline</v-icon> AI Bắt Lỗi
-            </v-badge>
-          </v-tab>
-          <v-tab value="reported">
-            <v-badge
-              color="red"
-              :content="reportedCount"
-              :model-value="reportedCount > 0"
-              floating
-            >
-              <v-icon start>mdi-flag-triangle</v-icon> Bị Báo Cáo
+              Bắt lỗi tự động
             </v-badge>
           </v-tab>
         </v-tabs>
@@ -298,7 +288,10 @@
         <v-divider></v-divider>
 
         <v-card-text class="pt-4">
-          <v-row density="compact" class="mb-4 bg-grey-lighten-4 pa-3 rounded-lg">
+          <v-row
+            density="compact"
+            class="mb-4 bg-grey-lighten-4 pa-3 rounded-lg"
+          >
             <v-col cols="12" sm="6">
               <div class="text-caption text-grey-darken-1">
                 Họ tên người đánh giá

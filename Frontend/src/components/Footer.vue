@@ -49,7 +49,7 @@
         <v-col
           cols="12"
           md="4"
-          class="d-flex flex-column align-center justify-center"
+          class="d-flex flex-column align-center align-md-start mb-6 mb-md-0"
         >
           <div class="footer-title-wrap mb-4">
             <h4 class="footer-static-title">Theo dõi chúng tôi</h4>
@@ -85,7 +85,7 @@
             </v-btn>
           </div>
 
-          <p class="text-caption text-grey-darken-1">
+          <p class="text-caption text-grey-darken-1 text-no-wrap">
             &copy; {{ new Date().getFullYear() }} - Sport Store. Bảo lưu mọi
             quyền.
           </p>
@@ -103,9 +103,9 @@
 }
 
 .footer-title-wrap {
+  min-height: 40px;
   display: flex;
   align-items: center;
-  height: 55px;
 }
 
 .footer-logo-img {
