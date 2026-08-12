@@ -49,6 +49,7 @@ create table products
     discount_percent int                       default 0                 null comment 'Phần trăm giảm giá (0-100%)',
     sale_start       datetime                                            null comment 'Ngày bắt đầu khuyến mãi',
     sale_end         datetime                                            null comment 'Ngày kết thúc khuyến mãi',
+    views            int                       default 0                 null,
     constraint fk_product_brand
         foreign key (brand_id) references brands (id)
             on delete set null,
@@ -129,6 +130,20 @@ create table users
         unique (phone_number)
 );
 
+create table activity_logs
+(
+    id          varchar(36)                         not null
+        primary key,
+    user_id     varchar(20)                         not null,
+    action      varchar(100)                        not null comment 'Loại hành động: UPDATE_ORDER, IMPORT_STOCK, DELETE_PRODUCT...',
+    description text                                not null comment 'Mô tả chi tiết: Đã hủy đơn hàng #123',
+    target_id   varchar(36)                         null comment 'ID của đối tượng bị tác động (ID đơn hàng, ID sản phẩm)',
+    created_at  timestamp default CURRENT_TIMESTAMP null,
+    constraint fk_activity_user
+        foreign key (user_id) references users (id)
+            on delete cascade
+);
+
 create table addresses
 (
     id               varchar(6)                           not null
@@ -176,6 +191,23 @@ create table cart_items
             on delete cascade
 );
 
+create table favorites
+(
+    id         varchar(36)                        not null
+        primary key,
+    user_id    varchar(20)                        not null,
+    product_id varchar(6)                         not null,
+    created_at datetime default CURRENT_TIMESTAMP null,
+    constraint unique_user_product
+        unique (user_id, product_id),
+    constraint fk_fav_product
+        foreign key (product_id) references products (id)
+            on delete cascade,
+    constraint fk_fav_user
+        foreign key (user_id) references users (id)
+            on delete cascade
+);
+
 create table notifications
 (
     id           int auto_increment
@@ -197,13 +229,17 @@ create index user_id
 
 create table reviews
 (
-    id         varchar(6)                         not null
+    id            varchar(6)                                                         not null
         primary key,
-    product_id varchar(6)                         not null,
-    user_id    varchar(20)                        not null,
-    rating     int                                null,
-    comment    text                               null,
-    created_at datetime default CURRENT_TIMESTAMP null,
+    product_id    varchar(6)                                                         not null,
+    user_id       varchar(20)                                                        not null,
+    rating        int                                                                null,
+    comment       text                                                               null,
+    created_at    datetime                                 default CURRENT_TIMESTAMP null,
+    status        enum ('approved', 'pending', 'rejected') default 'pending'         null,
+    ai_label      varchar(50)                                                        null comment 'Nhãn do AI dự đoán (valid/violation)',
+    ai_confidence float                                                              null comment 'Độ tin cậy của AI',
+    ai_probs      text                                                               null comment 'Lưu phân bổ xác suất JSON từ AI',
     constraint fk_rev_product
         foreign key (product_id) references products (id)
             on delete cascade,
@@ -352,5 +388,18 @@ create table transactions
         foreign key (order_id) references orders (id)
             on delete cascade
 );
+
+create
+    definer = root@localhost function generate_random_id() returns varchar(6) deterministic
+BEGIN
+    DECLARE chars VARCHAR(36) DEFAULT 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    DECLARE result VARCHAR(6) DEFAULT '';
+    DECLARE i INT DEFAULT 1;
+    WHILE i <= 6 DO
+        SET result = CONCAT(result, SUBSTRING(chars, FLOOR(1 + RAND() * 36), 1));
+        SET i = i + 1;
+    END WHILE;
+    RETURN result;
+END;
 
 
