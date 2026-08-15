@@ -210,7 +210,7 @@
       </v-container>
     </v-main>
 
-    <ChatBox />
+    <!-- <ChatBox /> -->
   </v-app>
 </template>
 

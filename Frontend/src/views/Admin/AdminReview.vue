@@ -2,7 +2,7 @@
   <v-container
     fluid
     theme="light"
-    class="fill-height d-flex flex-column align-start pa-6"
+    class="d-flex flex-column align-start pa-6"
     style="background-color: #f4f6f8; min-height: 100vh"
   >
     <Loading :visible="isLoading" text="Đang xử lý dữ liệu..." />
@@ -35,6 +35,8 @@
           color="orange-lighten-5"
           class="border pa-4 rounded-xl d-flex align-center justify-space-between"
           elevation="0"
+          hover
+          @click="activeTab = 'pending'"
         >
           <div>
             <div
@@ -56,12 +58,14 @@
           color="green-lighten-5"
           class="border pa-4 rounded-xl d-flex align-center justify-space-between"
           elevation="0"
+          hover
+          @click="activeTab = 'approved'"
         >
           <div>
             <div
               class="text-subtitle-2 text-green-darken-4 font-weight-bold mb-1"
             >
-              Số lượng đã duyệt (AI & Admin)
+              Số lượng đã duyệt
             </div>
             <div class="text-h4 font-weight-black text-green-darken-4">
               {{ approvedCount }}
@@ -77,6 +81,8 @@
           color="grey-lighten-4"
           class="border pa-4 rounded-xl d-flex align-center justify-space-between"
           elevation="0"
+          hover
+          @click="activeTab = 'rejected'"
         >
           <div>
             <div
@@ -100,9 +106,10 @@
       width="100%"
       elevation="0"
       rounded="xl"
-      class="pa-4 border"
+      class="pa-4 border flex-grow-1 d-flex flex-column"
     >
       <div class="d-flex justify-space-between align-center mb-4">
+        <!-- Danh sách các tab đồng bộ với sự kiện click thẻ thống kê -->
         <v-tabs v-model="activeTab" color="indigo-darken-4">
           <v-tab value="all">Tất cả</v-tab>
           <v-tab value="pending">
@@ -112,9 +119,11 @@
               :model-value="pendingCount > 0"
               floating
             >
-              Bắt lỗi tự động
+              Chờ duyệt
             </v-badge>
           </v-tab>
+          <v-tab value="approved">Đã duyệt</v-tab>
+          <v-tab value="rejected">Đã ẩn</v-tab>
         </v-tabs>
 
         <!-- Chức năng xử lý hàng loạt -->
@@ -122,9 +131,9 @@
           v-if="selectedReviews.length > 0"
           class="d-flex align-center gap-3 bg-indigo-lighten-5 pa-2 rounded-lg"
         >
-          <span class="text-body-2 font-weight-bold text-indigo-darken-4 mx-2"
-            >Đã chọn: {{ selectedReviews.length }}</span
-          >
+          <span class="text-body-2 font-weight-bold text-indigo-darken-4 mx-2">
+            Đã chọn: {{ selectedReviews.length }}
+          </span>
           <v-btn
             color="success"
             size="small"
@@ -164,7 +173,7 @@
         show-select
         item-value="id"
         hover
-        class="bg-white rounded-lg custom-table"
+        class="bg-white rounded-lg custom-table flex-grow-1"
       >
         <template v-slot:item.comment="{ item }">
           <div
@@ -193,7 +202,7 @@
             class="font-weight-medium"
             :class="`text-${getLabelColor(item.ai_label)}`"
           >
-            {{ item.ai_confidence }}%
+            {{ formatPercent(item.ai_confidence) }}%
           </span>
         </template>
 
@@ -357,7 +366,7 @@
                   class="font-weight-bold text-h6"
                   :class="`text-${getLabelColor(detailItem.ai_label)}`"
                 >
-                  {{ detailItem.ai_confidence || 0 }}%
+                  {{ formatPercent(detailItem.ai_confidence) }}%
                 </div>
               </v-col>
             </v-row>
@@ -475,6 +484,14 @@ const reportedCount = computed(
 
 const filteredReviews = computed(() => {
   if (activeTab.value === "all") return reviews.value;
+
+  // Thêm logic để lấy cả auto_approved và approved khi click vào ô "Đã duyệt"
+  if (activeTab.value === "approved") {
+    return reviews.value.filter(
+      (r) => r.status === "auto_approved" || r.status === "approved",
+    );
+  }
+
   return reviews.value.filter((r) => r.status === activeTab.value);
 });
 
@@ -538,6 +555,11 @@ const fetchReviews = async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+const formatPercent = (value) => {
+  if (!value) return 0;
+  return (parseFloat(value) * 100).toFixed(1);
 };
 
 const changeStatus = async (id, status) => {
@@ -631,5 +653,26 @@ onMounted(() => fetchReviews());
 :deep(.v-data-table th.v-data-table__th:hover),
 :deep(.v-data-table th.v-data-table__th:hover .v-data-table-header__sort-icon) {
   color: #1a237e !important;
+}
+
+/* Sửa lỗi: khi bảng ít dữ liệu, v-table__wrapper (do được flex-grow-1 giãn
+   theo chiều cao còn lại của v-card) sẽ mặc định canh giữa nội dung theo
+   chiều dọc, khiến heading của bảng "trôi" xuống giữa trang. Ép nội dung
+   luôn bám sát lên đầu (flex-start) để heading luôn nằm ngay dưới hàng tab. */
+:deep(.custom-table.v-table) {
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.custom-table .v-table__wrapper) {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-content: flex-start;
+}
+
+:deep(.custom-table .v-table__wrapper > table) {
+  flex-shrink: 0;
 }
 </style>

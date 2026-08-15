@@ -922,14 +922,13 @@ const wordCount = computed(() => {
 const validateReviewContent = (text) => {
   if (!text || text.trim() === "") return "Vui lòng nhập nội dung đánh giá.";
 
-  // 1. Kiểm tra độ dài từ (Tối thiểu 20, Tối đa 500)
+  // 1. Kiểm tra độ dài từ (Tối đa 500)
   const count = wordCount.value;
   if (count > 500) {
     return `Đánh giá vượt quá giới hạn (Tối đa 500 từ).`;
   }
 
   // 2. Kiểm tra Số điện thoại cơ bản
-  // Không cần xử lý xóa khoảng trắng, các trường hợp lách luật sẽ do ML kiểm tra sau
   const phoneRegex = /(0[3|5|7|8|9])[0-9]{8}/g;
   if (phoneRegex.test(text)) {
     return "Hệ thống đã chặn: Không cung cấp Số điện thoại trong nội dung.";
@@ -942,8 +941,7 @@ const validateReviewContent = (text) => {
     return "Hệ thống đã chặn: Không chèn các đường dẫn (Link) vào đánh giá.";
   }
 
-  // Đã bỏ kiểm tra Email theo yêu cầu
-  return null; // Hợp lệ ở mức cơ bản, sẵn sàng gửi cho ML quét sâu hơn
+  return null;
 };
 
 const openReviewDialog = (item, orderId) => {
@@ -975,8 +973,8 @@ const submitReview = async () => {
   // Yêu cầu 2 & 3: Thực hiện scan kiểm duyệt nội dung văn bản dữ liệu thô
   const errorMsg = validateReviewContent(reviewForm.value.comment);
   if (errorMsg) {
-    reviewError.value = errorMsg; // Đẩy text lỗi trực tiếp vào dưới ô v-textarea
-    return; // Ngắt tiến trình
+    reviewError.value = errorMsg;
+    return;
   }
 
   isSubmittingReview.value = true;
@@ -986,7 +984,6 @@ const submitReview = async () => {
 
     // 1. Hứng kết quả trả về từ Backend vào biến 'response'
     const response = await ReviewService.create({
-      user_id: user.id,
       product_id: reviewItem.value.product_id,
       order_id: currentOrderId.value,
       rating: reviewForm.value.rating,
@@ -1018,7 +1015,6 @@ const submitReview = async () => {
 
 const gotoChat = (orderId) => {
   if (chatBoxRef.value) {
-    // Gọi hàm mở hộp thoại bên trong Chat.vue
     chatBoxRef.value.openChatWithOrder(orderId);
   }
 };

@@ -9,10 +9,10 @@ const ReviewController = {
     const { product_id, rating, comment } = req.body;
     const user_id = req.user.id;
 
-    if (!product_id || !rating) {
+    if (!product_id || !rating || !comment || comment.trim() === "") {
       throw new ApiError(
         400,
-        "Vui lòng cung cấp ID sản phẩm và số sao đánh giá",
+        "Vui lòng cung cấp đầy đủ thông tin: ID sản phẩm, số sao và nội dung đánh giá",
       );
     }
 
@@ -33,45 +33,38 @@ const ReviewController = {
       "Đánh giá của bạn đã được ghi nhận và đang chờ duyệt.";
     let aiLabel = null;
     let aiConfidence = null;
-    let aiProbs = null; // Biến lưu phân bổ xác suất
+    let aiProbs = null;
 
-    if (comment && comment.trim() !== "") {
-      try {
-        const aiResponse = await axios.post("http://localhost:8080/predict", {
-          text: comment,
-        });
+    try {
+      const aiResponse = await axios.post("http://localhost:8080/predict", {
+        text: comment,
+      });
 
-        aiLabel = aiResponse.data.prediction;
-        aiConfidence = aiResponse.data.probability;
+      aiLabel = aiResponse.data.prediction;
+      aiConfidence = aiResponse.data.probability;
 
-        // Trích xuất và chuyển đổi object probabilities thành chuỗi JSON
-        if (aiResponse.data.probabilities) {
-          aiProbs = JSON.stringify(aiResponse.data.probabilities);
-        }
-
-        if (aiLabel === "valid" && aiConfidence >= 0.8) {
-          reviewStatus = "approved";
-          responseMessage = "Cảm ơn bạn đã đánh giá sản phẩm!";
-        } else if (aiLabel === "violation" && aiConfidence >= 0.9) {
-          reviewStatus = "rejected";
-          responseMessage =
-            "Đánh giá của bạn vi phạm tiêu chuẩn cộng đồng và đã bị từ chối.";
-        } else {
-          reviewStatus = "pending";
-          responseMessage =
-            "Đánh giá của bạn chứa nội dung cần xác minh, đang chờ Admin kiểm duyệt.";
-        }
-      } catch (aiError) {
-        console.error("Lỗi khi kết nối với AI Model:", aiError.message);
-        reviewStatus = "pending";
-        responseMessage = "Đánh giá của bạn đang được hệ thống xử lý.";
+      if (aiResponse.data.probabilities) {
+        aiProbs = JSON.stringify(aiResponse.data.probabilities);
       }
-    } else {
-      reviewStatus = "approved";
-      responseMessage = "Cảm ơn bạn đã đánh giá sản phẩm!";
+
+      if (aiLabel === "valid" && aiConfidence >= 0.8) {
+        reviewStatus = "approved";
+        responseMessage = "Cảm ơn bạn đã đánh giá sản phẩm!";
+      } else if (aiLabel === "violation" && aiConfidence >= 0.9) {
+        reviewStatus = "rejected";
+        responseMessage =
+          "Đánh giá của bạn vi phạm tiêu chuẩn cộng đồng và đã bị từ chối.";
+      } else {
+        reviewStatus = "pending";
+        responseMessage =
+          "Đánh giá của bạn chứa nội dung cần xác minh, đang chờ Admin kiểm duyệt.";
+      }
+    } catch (aiError) {
+      console.error("Lỗi khi kết nối với AI Model:", aiError.message);
+      reviewStatus = "pending";
+      responseMessage = "Đánh giá của bạn đang được hệ thống xử lý.";
     }
 
-    // Truyền thêm ai_probs vào Model
     const id = await ReviewModel.create({
       product_id,
       user_id,
