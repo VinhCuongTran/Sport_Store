@@ -39,7 +39,7 @@ const Product = {
       }
 
       if (images && images.length > 0) {
-        const imageValues = images.map((img) => [
+        const imageValues = images.map((img, index) => [
           generateId(),
           productId,
           img.image_url,
@@ -50,9 +50,15 @@ const Product = {
             ? 1
             : 0,
           img.embedding || null,
+          img.is_variant_thumbnail === true ||
+          img.is_variant_thumbnail === "true" ||
+          img.is_variant_thumbnail === 1
+            ? 1
+            : 0,
+          img.sort_order ?? index,
         ]);
         await connection.query(
-          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail, embedding) VALUES ?",
+          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail, embedding, is_variant_thumbnail, sort_order) VALUES ?",
           [imageValues],
         );
       }
@@ -81,7 +87,7 @@ const Product = {
 
     let query = `
       SELECT p.*, b.name as brand_name, c.name as category_name, s.name as sport_name,
-             (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumbnail,
+             (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 ORDER BY sort_order ASC, id ASC LIMIT 1) as thumbnail,
              (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price,
              CASE
                WHEN p.discount_percent > 0
@@ -129,7 +135,7 @@ const Product = {
         "(SELECT COUNT(*) FROM favorites WHERE product_id = p.id AND user_id = ?) AS is_favorite";
       params.push(userId);
     }
-    params.push(id); 
+    params.push(id);
 
     let query = `
       SELECT p.*, b.name as brand_name, 
@@ -168,7 +174,7 @@ const Product = {
     );
 
     const [images] = await db.query(
-      "SELECT id, product_id, image_url, color, is_thumbnail FROM product_images WHERE product_id = ?",
+      "SELECT id, product_id, image_url, color, is_thumbnail, is_variant_thumbnail, sort_order FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC",
       [id],
     );
 
@@ -191,6 +197,9 @@ const Product = {
     images,
     deletedImageIds = [],
     thumbnailId = null,
+    variantThumbnailIds = [],
+    imageOrder = [],
+    imageUpdates = [],
   ) => {
     const connection = await db.getConnection();
     try {
@@ -269,6 +278,34 @@ const Product = {
           [deletedImageIds, id],
         );
       }
+
+      if (imageUpdates && imageUpdates.length > 0) {
+        for (const image of imageUpdates) {
+          await connection.query(
+            "UPDATE product_images SET color = ? WHERE id = ? AND product_id = ?",
+            [
+              image.color ? image.color.trim().toUpperCase() : null,
+              image.id,
+              id,
+            ],
+          );
+        }
+      }
+
+      if (imageOrder && imageOrder.length > 0) {
+        for (const [index, imageId] of imageOrder.entries()) {
+          await connection.query(
+            "UPDATE product_images SET sort_order = ? WHERE id = ? AND product_id = ?",
+            [index, imageId, id],
+          );
+        }
+      }
+
+      await connection.query(
+        "UPDATE product_images SET is_variant_thumbnail = 0 WHERE product_id = ?",
+        [id],
+      );
+
       const hasNewThumbnail =
         images &&
         images.some(
@@ -290,7 +327,8 @@ const Product = {
         );
       }
       if (images && images.length > 0) {
-        const imageValues = images.map((img) => [
+        const existingImageCount = imageOrder.length;
+        const imageValues = images.map((img, index) => [
           generateId(),
           id,
           img.image_url,
@@ -301,11 +339,26 @@ const Product = {
             ? 1
             : 0,
           img.embedding || null,
+          img.is_variant_thumbnail === true ||
+          img.is_variant_thumbnail === "true" ||
+          img.is_variant_thumbnail === 1
+            ? 1
+            : 0,
+          img.sort_order ?? existingImageCount + index,
         ]);
         await connection.query(
-          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail, embedding) VALUES ?",
+          "INSERT INTO product_images (id, product_id, image_url, color, is_thumbnail, embedding, is_variant_thumbnail, sort_order) VALUES ?",
           [imageValues],
         );
+      }
+
+      if (variantThumbnailIds && variantThumbnailIds.length > 0) {
+        for (const imageId of variantThumbnailIds) {
+          await connection.query(
+            "UPDATE product_images SET is_variant_thumbnail = 1 WHERE id = ? AND product_id = ?",
+            [imageId, id],
+          );
+        }
       }
 
       await connection.commit();
@@ -536,7 +589,7 @@ const Product = {
     // Tận dụng cấu trúc câu SQL đếm discount và lấy thumbnail từ hàm getAll() của bạn
     const query = `
       SELECT p.*, b.name as brand_name, c.name as category_name,
-             (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 LIMIT 1) as thumbnail,
+             (SELECT image_url FROM product_images WHERE product_id = p.id AND is_thumbnail = 1 ORDER BY sort_order ASC, id ASC LIMIT 1) as thumbnail,
              (SELECT MIN(price) FROM product_variants WHERE product_id = p.id) as min_price,
              CASE
                WHEN p.discount_percent > 0

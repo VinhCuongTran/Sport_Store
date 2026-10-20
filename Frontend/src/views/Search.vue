@@ -176,7 +176,7 @@ const sortOptions = [
   { title: "Giá: Cao đến Thấp", value: "price_desc" },
 ];
 
-// --- HÀM TỐI ƯU TỐC ĐỘ: Thu nhỏ ảnh gốc trước khi đưa vào AI (Giảm tải bộ nhớ) ---
+// Thu nhỏ ảnh gốc  ---
 const compressImage = (file, maxSize = 512) => {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -258,9 +258,7 @@ const executeSearch = async () => {
       const compressedFile = await compressImage(searchState.imageFile, 512);
 
       const aiConfig = {
-        // Trỏ về thư mục public/models/ của dự án (Tốc độ tải gần như tức thì)
-        //publicPath: window.location.origin + "/Models/",
-        model: "small", // Vẫn dùng model nhỏ nhẹ
+        model: "small",
       };
 
       // 2. Tách nền bằng AI VỚI CẤU HÌNH SIÊU TỐC

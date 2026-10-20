@@ -99,7 +99,6 @@ const OrderController = {
       final_subtotal + shipping_fee - final_discount - final_shipping_discount;
     if (total_price < 0) total_price = 0;
 
-    // --- LOGIC MỚI: XÁC ĐỊNH ONLINE PAYMENT ---
     const isOnlinePayment = ["BankTransfer", "VNPay", "Momo"].includes(
       payment_method,
     );
@@ -118,7 +117,7 @@ const OrderController = {
       phone_number,
       shipping_address,
       payment_method,
-      payment_status: initialPaymentStatus, // Ép kiểu paid nếu chuyển khoản
+      payment_status: initialPaymentStatus,
     };
 
     const orderId = await OrderModel.create(orderData, items);

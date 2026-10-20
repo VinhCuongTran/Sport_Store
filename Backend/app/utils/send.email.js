@@ -19,7 +19,7 @@ const formatCurrency = (amount) => {
   }).format(amount);
 };
 
-// Hàm dùng chung để build layout HTML giống auth.controller.js
+// Hàm dùng chung để build layout HTML
 const buildOrderEmailHtml = ({ icon, headerTitle, buyerName, bodyContent }) => `
 <!DOCTYPE html>
 <html lang="vi">

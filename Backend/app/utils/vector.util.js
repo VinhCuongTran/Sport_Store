@@ -1,5 +1,5 @@
 // utils/vector.util.js
-// Các hàm toán học đơn giản để so sánh vector (embedding)
+// Các hàm toán học đơn giản để so sánh vector
 
 /**
  * Tính độ tương đồng cosine giữa 2 vector cùng chiều.

@@ -63,10 +63,12 @@ create table product_images
     id           varchar(6)           not null
         primary key,
     product_id   varchar(6)           not null,
-    image_url    varchar(1000)        null,
-    color        varchar(50)          null,
-    is_thumbnail tinyint(1) default 0 null,
-    embedding    json                 null comment 'Vector CLIP dùng cho tìm kiếm bằng hình ảnh',
+    image_url             varchar(1000)        null,
+    color                 varchar(50)          null,
+    is_thumbnail          tinyint(1) default 0 null,
+    embedding             json                 null comment 'Vector CLIP dùng cho tìm kiếm bằng hình ảnh',
+    is_variant_thumbnail  tinyint(1) default 0 null,
+    sort_order            int         default 0 not null,
     constraint fk_pi_product
         foreign key (product_id) references products (id)
             on delete cascade
@@ -401,5 +403,4 @@ BEGIN
     END WHILE;
     RETURN result;
 END;
-
 

@@ -4,8 +4,8 @@ const ApiError = require("../utils/api.error");
 const { getImageEmbedding } = require("../utils/embedding.util");
 const { cosineSimilarity } = require("../utils/vector.util");
 
-const SIMILARITY_THRESHOLD = 0.75; // Giữ nguyên ngưỡng của bạn
-const MAX_RESULTS = 20; // Tăng lên 20 để hiển thị nhiều kết quả hơn (bạn đang để 10)
+const SIMILARITY_THRESHOLD = 0.75;
+const MAX_RESULTS = 20;
 
 const SearchController = {
   searchByImage: asyncHandler(async (req, res) => {
@@ -134,7 +134,6 @@ const SearchController = {
       return {
         ...p,
         active_discount: activeDiscount,
-        // Ép kiểu số để frontend dễ sort/filter
         min_price: p.min_price ? parseFloat(p.min_price) : 0,
         sold_count: p.sold_count ? parseInt(p.sold_count) : 0,
         average_rating: p.average_rating ? parseFloat(p.average_rating) : 0,

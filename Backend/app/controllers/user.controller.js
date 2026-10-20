@@ -23,14 +23,20 @@ const UserController = {
     res.json({ message: "Xóa người dùng thành công" });
   }),
 
-  update: asyncHandler(async (req, res) => {
+update: asyncHandler(async (req, res) => {
     const data = req.body;
 
+    // Lấy targetId từ params nếu có, hoặc mặc định là chính user đang đăng nhập
+    const targetId = req.params.id || req.user.id;
+
+    // Kiểm tra quyề
+    // Nếu KHÔNG phải admin/staff VÀ đang cố tìnhn hạn:  sửa tài khoản của NGƯỜI KHÁC thì mới chặn lại
     if (req.user && req.user.role !== "admin" && req.user.role !== "staff") {
-      delete data.role;
+      delete data.role; 
       delete data.status;
 
-      if (req.user.id !== parseInt(req.params.id)) {
+      // So sánh ID chuỗi để cho phép customer tự sửa thông tin/avatar của chính họ
+      if (String(req.user.id) !== String(targetId)) {
         throw new ApiError(
           403,
           "Bạn không có quyền cập nhật tài khoản người khác",
@@ -50,7 +56,7 @@ const UserController = {
     }
 
     try {
-      const isUpdated = await UserModel.update(req.params.id, data);
+      const isUpdated = await UserModel.update(targetId, data);
       if (!isUpdated) {
         throw new ApiError(404, "Không tìm thấy người dùng để cập nhật");
       }
@@ -58,7 +64,7 @@ const UserController = {
         message: "Cập nhật người dùng thành công",
         avatar: data.avatar || "Giữ nguyên ảnh cũ",
       });
-      await ActivityLog.logAction(req.user.id, 'UPDATE_USER', `Đã cập nhật người dùng`, req.params.id);
+      await ActivityLog.logAction(req.user.id, 'UPDATE_USER', `Đã cập nhật người dùng`, targetId);
     } catch (error) {
       if (error.code === "ER_DUP_ENTRY") {
         throw new ApiError(

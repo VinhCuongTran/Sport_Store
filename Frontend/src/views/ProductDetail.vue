@@ -265,7 +265,7 @@
                   ]"
                   @click="selectColor(color)"
                 >
-                  <v-img :src="getColorImages(color)[0]" cover></v-img>
+                  <v-img :src="getColorThumbnail(color)" cover></v-img>
                 </div>
               </div>
             </div>
@@ -1112,11 +1112,7 @@ const fetchProductDetail = async () => {
     if (finalColorToSelect) {
       selectColor(finalColorToSelect);
     } else {
-      const sortedImages = [...productImages.value].sort((a, b) => {
-        const isThumbA = a.is_thumbnail == 1 || a.is_thumbnail === true ? 1 : 0;
-        const isThumbB = b.is_thumbnail == 1 || b.is_thumbnail === true ? 1 : 0;
-        return isThumbB - isThumbA;
-      });
+      const sortedImages = sortProductImages(productImages.value, true);
       currentGallery.value = sortedImages.map(
         (img) => img.image_url || img.url || img,
       );
@@ -1134,34 +1130,76 @@ const fetchProductDetail = async () => {
 };
 const productImages = computed(() => product.value?.images || []);
 const uniqueColors = computed(() => [
-  ...new Set((product.value?.variants || []).map((v) => v.color)),
+  ...new Set(
+    (product.value?.variants || [])
+      .map((v) => v.color)
+      .filter((color) => color),
+  ),
 ]);
 
-const getColorImages = (color) => {
-  const allImgs = productImages.value || [];
-  const safeColor = color ? String(color).trim().toLowerCase() : "";
-  let filtered = allImgs.filter((img) => {
-    const imgColor = img.color ? String(img.color).trim().toLowerCase() : "";
-    return imgColor === safeColor;
+const isProductThumbnail = (image) =>
+  image?.is_thumbnail == 1 || image?.is_thumbnail === true;
+
+const isVariantThumbnail = (image) =>
+  image?.is_variant_thumbnail == 1 || image?.is_variant_thumbnail === true;
+
+const getImageUrl = (image) => image?.image_url || image?.url || image;
+
+const sortProductImages = (images = [], prioritizeProductThumbnail = false) =>
+  [...images].sort((a, b) => {
+    if (prioritizeProductThumbnail) {
+      const thumbnailDifference =
+        Number(isProductThumbnail(b)) - Number(isProductThumbnail(a));
+      if (thumbnailDifference !== 0) return thumbnailDifference;
+    }
+
+    const orderA = Number.isFinite(Number(a?.sort_order))
+      ? Number(a.sort_order)
+      : Number.MAX_SAFE_INTEGER;
+    const orderB = Number.isFinite(Number(b?.sort_order))
+      ? Number(b.sort_order)
+      : Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
   });
 
-  if (filtered.length === 0) {
-    filtered = [...allImgs];
-  }
+const getColorImageRecords = (color) => {
+  const safeColor = color ? String(color).trim().toLowerCase() : "";
+  const matchingImages = productImages.value.filter((image) => {
+    const imageColor = image.color
+      ? String(image.color).trim().toLowerCase()
+      : "";
+    return imageColor === safeColor;
+  });
 
-  if (filtered.length === 0) {
+  const images = matchingImages.length > 0 ? matchingImages : productImages.value;
+  const orderedImages = sortProductImages(images);
+  const variantThumbnailIndex = orderedImages.findIndex(isVariantThumbnail);
+
+  if (variantThumbnailIndex <= 0) return orderedImages;
+
+  const [variantThumbnail] = orderedImages.splice(variantThumbnailIndex, 1);
+  orderedImages.unshift(variantThumbnail);
+  return orderedImages;
+};
+
+const getColorThumbnail = (color) => {
+  const images = getColorImageRecords(color);
+  const variantThumbnail = images.find(isVariantThumbnail);
+  const firstImage = images[0];
+  return getImageUrl(variantThumbnail || firstImage) ||
+    "https://placehold.co/600x600?text=No+Image";
+};
+
+const getColorImages = (color) => {
+  const images = getColorImageRecords(color);
+
+  if (images.length === 0) {
     if (product.value?.image_url) return [product.value.image_url];
     if (product.value?.image) return [product.value.image];
     return ["https://placehold.co/600x600?text=No+Image"];
   }
 
-  filtered.sort((a, b) => {
-    const isThumbA = a.is_thumbnail == 1 || a.is_thumbnail === true ? 1 : 0;
-    const isThumbB = b.is_thumbnail == 1 || b.is_thumbnail === true ? 1 : 0;
-    return isThumbB - isThumbA;
-  });
-
-  return filtered.map((img) => img.image_url || img.url || img);
+  return images.map(getImageUrl);
 };
 
 const selectColor = (color) => {
@@ -1238,7 +1276,11 @@ const formatPrice = (value) =>
     value || 0,
   );
 const formatDate = (date) => new Date(date).toLocaleDateString("vi-VN");
-const formatDescription = (desc) => (desc ? desc.replace(/\n/g, "<br />") : "");
+const formatDescription = (desc) => {
+  if (!desc) return "";
+  if (/<[a-z][\s\S]*>/i.test(desc)) return desc;
+  return desc.replace(/\n/g, "<br />");
+};
 const showMessage = (text, color = "success") => {
   snackbar.value = { show: true, text, color };
 };

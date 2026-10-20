@@ -329,12 +329,116 @@
                     class="text-caption font-weight-bold text-indigo-darken-3 mb-1 d-block"
                     >Mô tả chi tiết</label
                   >
-                  <textarea
-                    v-model="formData.description"
-                    class="custom-input text-black"
-                    rows="3"
-                    placeholder="Nhập mô tả sản phẩm..."
-                  ></textarea>
+                  <div class="rich-editor-wrapper">
+                    <div class="rich-editor-toolbar">
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="In đậm"
+                        @mousedown.prevent
+                        @click="formatDescription('bold')"
+                      >
+                        <v-icon>mdi-format-bold</v-icon>
+                      </v-btn>
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="In nghiêng"
+                        @mousedown.prevent
+                        @click="formatDescription('italic')"
+                      >
+                        <v-icon>mdi-format-italic</v-icon>
+                      </v-btn>
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="Gạch chân"
+                        @mousedown.prevent
+                        @click="formatDescription('underline')"
+                      >
+                        <v-icon>mdi-format-underline</v-icon>
+                      </v-btn>
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="Thụt đầu dòng"
+                        @mousedown.prevent
+                        @click="changeDescriptionIndent(1)"
+                      >
+                        <v-icon>mdi-format-indent-increase</v-icon>
+                      </v-btn>
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="Bỏ thụt đầu dòng"
+                        @mousedown.prevent
+                        @click="changeDescriptionIndent(-1)"
+                      >
+                        <v-icon>mdi-format-indent-decrease</v-icon>
+                      </v-btn>
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="Danh sách gạch đầu dòng"
+                        @mousedown.prevent
+                        @click="formatDescription('insertUnorderedList')"
+                      >
+                        <v-icon>mdi-format-list-bulleted</v-icon>
+                      </v-btn>
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="Danh sách đánh số"
+                        @mousedown.prevent
+                        @click="formatDescription('insertOrderedList')"
+                      >
+                        <v-icon>mdi-format-list-numbered</v-icon>
+                      </v-btn>
+                      <select
+                        class="editor-font-size"
+                        aria-label="Cỡ chữ"
+                        title="Cỡ chữ"
+                        @mousedown="saveDescriptionSelection"
+                        @change="formatFontSize($event)"
+                      >
+                        <option value="">Cỡ chữ</option>
+                        <option value="1">Nhỏ</option>
+                        <option value="2">Vừa nhỏ</option>
+                        <option value="3">Bình thường</option>
+                        <option value="4">Lớn</option>
+                        <option value="5">Rất lớn</option>
+                        <option value="6">Tiêu đề</option>
+                        <option value="7">Tiêu đề lớn</option>
+                      </select>
+                      <v-btn
+                        type="button"
+                        size="x-small"
+                        variant="text"
+                        title="Xóa định dạng"
+                        @mousedown.prevent
+                        @click="formatDescription('removeFormat')"
+                      >
+                        <v-icon>mdi-format-clear</v-icon>
+                      </v-btn>
+                    </div>
+                    <div
+                      ref="descriptionEditor"
+                      class="rich-editor text-black"
+                      contenteditable="true"
+                      data-placeholder="Nhập mô tả sản phẩm..."
+                      @input="handleDescriptionInput"
+                      @keydown="handleDescriptionKeydown"
+                      @mouseup="saveDescriptionSelection"
+                      @keyup="saveDescriptionSelection"
+                    ></div>
+                  </div>
                 </v-col>
               </v-row>
             </div>
@@ -566,6 +670,10 @@
                         :key="img.id"
                         class="position-relative border rounded shadow-sm bg-white"
                         style="width: 80px; height: 80px"
+                        draggable="true"
+                        @dragstart="startImageDrag(gIndex, iIndex, 'existing')"
+                        @dragover.prevent
+                        @drop="dropImage(gIndex, iIndex, 'existing')"
                       >
                         <v-img
                           :src="img.url"
@@ -587,6 +695,36 @@
                             z-index: 10;
                           "
                           @click="removeExistingImage(gIndex, iIndex)"
+                        ></v-btn>
+
+                        <v-btn
+                          :icon="
+                            img.is_variant_thumbnail
+                              ? 'mdi-image-star'
+                              : 'mdi-image-star-outline'
+                          "
+                          size="small"
+                          :color="
+                            img.is_variant_thumbnail
+                              ? 'teal-darken-2'
+                              : 'grey-lighten-1'
+                          "
+                          variant="elevated"
+                          class="position-absolute"
+                          style="
+                            top: -12px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            width: 26px;
+                            height: 26px;
+                            z-index: 10;
+                          "
+                          @click="setExistingVariantThumbnail(gIndex, iIndex)"
+                          :title="
+                            img.is_variant_thumbnail
+                              ? 'Ảnh đại diện biến thể'
+                              : 'Chọn ảnh đại diện biến thể'
+                          "
                         ></v-btn>
 
                         <v-btn
@@ -643,6 +781,10 @@
                       :key="fIndex"
                       class="position-relative border rounded shadow-sm bg-white"
                       style="width: 80px; height: 80px"
+                      draggable="true"
+                      @dragstart="startImageDrag(gIndex, fIndex, 'new')"
+                      @dragover.prevent
+                      @drop="dropImage(gIndex, fIndex, 'new')"
                     >
                       <v-img
                         :src="fileObj.preview"
@@ -664,6 +806,36 @@
                           z-index: 10;
                         "
                         @click="removeFile(gIndex, fIndex)"
+                      ></v-btn>
+
+                      <v-btn
+                        :icon="
+                          fileObj.is_variant_thumbnail
+                            ? 'mdi-image-star'
+                            : 'mdi-image-star-outline'
+                        "
+                        size="small"
+                        :color="
+                          fileObj.is_variant_thumbnail
+                            ? 'teal-darken-2'
+                            : 'grey-lighten-1'
+                        "
+                        variant="elevated"
+                        class="position-absolute"
+                        style="
+                          top: -12px;
+                          left: 50%;
+                          transform: translateX(-50%);
+                          width: 26px;
+                          height: 26px;
+                          z-index: 10;
+                        "
+                        @click="setVariantThumbnail(gIndex, fIndex)"
+                        :title="
+                          fileObj.is_variant_thumbnail
+                            ? 'Ảnh đại diện biến thể'
+                            : 'Chọn ảnh đại diện biến thể'
+                        "
                       ></v-btn>
 
                       <v-btn
@@ -822,7 +994,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, nextTick } from "vue";
 import ProductService from "@/services/product.service";
 import CategoryService from "@/services/category.service";
 import BrandService from "@/services/brand.service";
@@ -844,6 +1016,9 @@ const confirmDialogRef = ref(null);
 const snackbar = ref({ show: false, text: "", color: "success" });
 const deletedImageIds = ref([]);
 const selectedThumbnailId = ref(null);
+const draggedImage = ref(null);
+const descriptionEditor = ref(null);
+const savedDescriptionRange = ref(null);
 const showQuickSetup = ref(false);
 const quickSetup = ref({
   category: "shoes",
@@ -1055,6 +1230,105 @@ const showMessage = (text, color = "success") => {
   snackbar.value = { show: true, text, color };
 };
 
+const syncDescriptionEditor = () => {
+  if (descriptionEditor.value) {
+    descriptionEditor.value.innerHTML = formData.value.description || "";
+  }
+};
+
+const saveDescriptionSelection = () => {
+  const editor = descriptionEditor.value;
+  const selection = window.getSelection();
+  if (!editor || !selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  if (editor.contains(range.commonAncestorContainer)) {
+    savedDescriptionRange.value = range.cloneRange();
+  }
+};
+
+const restoreDescriptionSelection = () => {
+  const editor = descriptionEditor.value;
+  const range = savedDescriptionRange.value;
+  if (!editor || !range) return;
+
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
+const handleDescriptionInput = (event) => {
+  formData.value.description = event.target.innerHTML;
+  saveDescriptionSelection();
+};
+
+const formatDescription = (command) => {
+  if (!descriptionEditor.value) return;
+
+  restoreDescriptionSelection();
+  descriptionEditor.value.focus();
+  document.execCommand(command, false);
+  formData.value.description = descriptionEditor.value.innerHTML;
+  saveDescriptionSelection();
+};
+
+const changeDescriptionIndent = (direction) => {
+  const editor = descriptionEditor.value;
+  if (!editor) return;
+
+  restoreDescriptionSelection();
+  editor.focus();
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const range = selection.getRangeAt(0);
+  const blocks = [
+    editor,
+    ...editor.querySelectorAll(
+      "p, div, li, blockquote, h1, h2, h3, h4, h5, h6",
+    ),
+  ].filter((element) => {
+    try {
+      return element !== editor && range.intersectsNode(element);
+    } catch {
+      return false;
+    }
+  });
+
+  const targets = blocks.length > 0 ? blocks : [editor];
+  targets.forEach((block) => {
+    const currentIndent = parseInt(block.style.marginLeft || "0", 10) || 0;
+    const nextIndent = Math.max(0, currentIndent + direction * 24);
+    block.style.marginLeft = nextIndent > 0 ? `${nextIndent}px` : "";
+  });
+
+  formData.value.description = editor.innerHTML;
+  saveDescriptionSelection();
+};
+
+const formatFontSize = (event) => {
+  const size = event.target.value;
+  event.target.value = "";
+  if (!size) return;
+
+  restoreDescriptionSelection();
+  descriptionEditor.value?.focus();
+  document.execCommand("fontSize", false, size);
+  if (descriptionEditor.value) {
+    formData.value.description = descriptionEditor.value.innerHTML;
+    saveDescriptionSelection();
+  }
+};
+
+const handleDescriptionKeydown = (event) => {
+  if (event.key !== "Tab") return;
+
+  event.preventDefault();
+  saveDescriptionSelection();
+  changeDescriptionIndent(event.shiftKey ? -1 : 1);
+};
+
 const fetchData = async () => {
   isLoading.value = true;
   try {
@@ -1130,6 +1404,7 @@ const openCreateModal = () => {
   cleanupPreviews();
   colorGroups.value = [];
   showModal.value = true;
+  nextTick(syncDescriptionEditor);
 };
 
 const openEditModal = async (id) => {
@@ -1206,16 +1481,22 @@ const openEditModal = async (id) => {
         id: img.id,
         url: img.image_url,
         is_thumbnail: img.is_thumbnail == 1 || img.is_thumbnail === true,
+        is_variant_thumbnail:
+          img.is_variant_thumbnail == 1 || img.is_variant_thumbnail === true,
+        sort_order: img.sort_order ?? 0,
       });
     });
 
     Object.values(grouped).forEach((group) => {
       group.sizes.sort(sortSizes);
+      group.existing_images.sort((a, b) => a.sort_order - b.sort_order);
     });
 
     cleanupPreviews();
     colorGroups.value = Object.values(grouped);
     showModal.value = true;
+    await nextTick();
+    syncDescriptionEditor();
   } catch (error) {
     showMessage("Không thể tải chi tiết sản phẩm", "error");
   } finally {
@@ -1270,6 +1551,18 @@ const resetAllThumbnails = () => {
   });
 };
 
+const resetVariantThumbnails = (groupIndex) => {
+  const group = colorGroups.value[groupIndex];
+  if (group.files) {
+    group.files.forEach((file) => (file.is_variant_thumbnail = false));
+  }
+  if (group.existing_images) {
+    group.existing_images.forEach(
+      (image) => (image.is_variant_thumbnail = false),
+    );
+  }
+};
+
 const removeExistingImage = (groupIndex, imgIndex) => {
   const img = colorGroups.value[groupIndex].existing_images[imgIndex];
   deletedImageIds.value.push(img.id);
@@ -1283,18 +1576,66 @@ const setExistingThumbnail = (groupIndex, imgIndex) => {
   selectedThumbnailId.value = img.id;
 };
 
+const setExistingVariantThumbnail = (groupIndex, imgIndex) => {
+  resetVariantThumbnails(groupIndex);
+  const image = colorGroups.value[groupIndex].existing_images[imgIndex];
+  image.is_variant_thumbnail = true;
+};
+
 const handleColorFileChange = (event, groupIndex) => {
   const selectedFiles = Array.from(event.target.files);
-  const newFilesMapped = selectedFiles.map((file) => ({
+  const hasProductThumbnail = colorGroups.value.some(
+    (group) =>
+      group.files?.some((file) => file.is_thumbnail) ||
+      group.existing_images?.some((image) => image.is_thumbnail),
+  );
+  const hasVariantThumbnail =
+    colorGroups.value[groupIndex].files?.some(
+      (file) => file.is_variant_thumbnail,
+    ) ||
+    colorGroups.value[groupIndex].existing_images?.some(
+      (image) => image.is_variant_thumbnail,
+    );
+  const newFilesMapped = selectedFiles.map((file, index) => ({
     file: file,
     preview: URL.createObjectURL(file),
-    is_thumbnail: false,
+    is_thumbnail: !hasProductThumbnail && index === 0,
+    is_variant_thumbnail: !hasVariantThumbnail && index === 0,
   }));
 
   if (!colorGroups.value[groupIndex].files) {
     colorGroups.value[groupIndex].files = [];
   }
   colorGroups.value[groupIndex].files.push(...newFilesMapped);
+};
+
+const setVariantThumbnail = (groupIndex, fileIndex) => {
+  resetVariantThumbnails(groupIndex);
+  colorGroups.value[groupIndex].files[fileIndex].is_variant_thumbnail = true;
+};
+
+const startImageDrag = (groupIndex, imageIndex, type) => {
+  draggedImage.value = { groupIndex, imageIndex, type };
+};
+
+const dropImage = (groupIndex, targetIndex, type) => {
+  const source = draggedImage.value;
+  draggedImage.value = null;
+  if (
+    !source ||
+    source.groupIndex !== groupIndex ||
+    source.type !== type ||
+    source.imageIndex === targetIndex
+  ) {
+    return;
+  }
+
+  const images =
+    type === "existing"
+      ? colorGroups.value[groupIndex].existing_images
+      : colorGroups.value[groupIndex].files;
+  const [movedImage] = images.splice(source.imageIndex, 1);
+  images.splice(targetIndex, 0, movedImage);
 };
 
 const setThumbnail = (groupIndex, fileIndex) => {
@@ -1336,6 +1677,9 @@ const handleSave = async () => {
     const flatVariants = [];
     const flatFiles = [];
     const imagesMeta = [];
+    const variantThumbnailIds = [];
+    const imageOrder = [];
+    const imageUpdates = [];
 
     colorGroups.value.forEach((group) => {
       group.sizes.forEach((sizeObj) => {
@@ -1348,12 +1692,21 @@ const handleSave = async () => {
         });
       });
 
+      group.existing_images?.forEach((image) => {
+        imageOrder.push(image.id);
+        imageUpdates.push({ id: image.id, color: group.color });
+        if (image.is_variant_thumbnail) {
+          variantThumbnailIds.push(image.id);
+        }
+      });
+
       if (group.files && group.files.length > 0) {
         group.files.forEach((fileObj) => {
           flatFiles.push(fileObj.file);
           imagesMeta.push({
             color: group.color,
             is_thumbnail: fileObj.is_thumbnail,
+            is_variant_thumbnail: fileObj.is_variant_thumbnail,
           });
         });
       }
@@ -1393,6 +1746,9 @@ const handleSave = async () => {
       if (selectedThumbnailId.value) {
         data.append("thumbnail_id", selectedThumbnailId.value);
       }
+      data.append("variant_thumbnail_ids", JSON.stringify(variantThumbnailIds));
+      data.append("image_order", JSON.stringify(imageOrder));
+      data.append("image_updates", JSON.stringify(imageUpdates));
 
       await ProductService.update(formData.value.id, data);
       showMessage("Cập nhật sản phẩm thành công");
@@ -1444,6 +1800,64 @@ onMounted(() => {
 textarea.custom-input {
   resize: vertical;
   min-height: 80px;
+}
+.rich-editor-wrapper {
+  border: 1.5px solid #c5cae9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fafbff;
+}
+.rich-editor-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #c5cae9;
+  background: #eef0ff;
+}
+.editor-font-size {
+  height: 30px;
+  min-width: 112px;
+  margin-left: 4px;
+  padding: 0 8px;
+  border: 1px solid #c5cae9;
+  border-radius: 6px;
+  background: #fff;
+  color: #1a237e;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.editor-font-size:focus {
+  outline: 2px solid rgba(57, 73, 171, 0.2);
+  border-color: #3949ab;
+}
+.rich-editor {
+  min-height: 140px;
+  padding: 10px 12px;
+  outline: none;
+  line-height: 1.55;
+  white-space: normal;
+}
+.rich-editor:focus {
+  background: #fff;
+}
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #9e9e9e;
+  pointer-events: none;
+}
+.rich-editor :deep(ul),
+.rich-editor :deep(ol) {
+  padding-left: 24px;
+}
+.rich-editor :deep(ol),
+.rich-editor :deep(ul) {
+  margin: 8px 0;
+}
+.rich-editor :deep(div[style*="text-align"]),
+.rich-editor :deep(p[style*="text-align"]) {
+  min-height: 1.55em;
 }
 select.custom-input,
 input[type="datetime-local"].custom-input,

@@ -81,6 +81,10 @@ const Product = {
           color: meta.color || null,
           is_thumbnail:
             meta.is_thumbnail !== undefined ? meta.is_thumbnail : index === 0,
+          is_variant_thumbnail:
+            meta.is_variant_thumbnail !== undefined
+              ? meta.is_variant_thumbnail
+              : false,
         };
       });
 
@@ -89,7 +93,12 @@ const Product = {
     }
 
     const productId = await ProductModel.create(productData, variants, images);
-    await ActivityLog.logAction(req.user.id, 'CREATE_PRODUCT', `Đã thêm sản phẩm mới`, productId);
+    await ActivityLog.logAction(
+      req.user.id,
+      "CREATE_PRODUCT",
+      `Đã thêm sản phẩm mới`,
+      productId,
+    );
     res.status(201).json({
       message: "Tạo sản phẩm thành công",
       productId,
@@ -146,6 +155,9 @@ const Product = {
       images_meta,
       deleted_images,
       thumbnail_id,
+      variant_thumbnail_ids,
+      image_order,
+      image_updates,
       ...productData
     } = req.body;
 
@@ -167,6 +179,28 @@ const Product = {
         typeof deleted_images === "string"
           ? JSON.parse(deleted_images)
           : deleted_images;
+    }
+
+    let parsedVariantThumbnailIds = [];
+    if (variant_thumbnail_ids) {
+      parsedVariantThumbnailIds =
+        typeof variant_thumbnail_ids === "string"
+          ? JSON.parse(variant_thumbnail_ids)
+          : variant_thumbnail_ids;
+    }
+
+    let parsedImageOrder = [];
+    if (image_order) {
+      parsedImageOrder =
+        typeof image_order === "string" ? JSON.parse(image_order) : image_order;
+    }
+
+    let parsedImageUpdates = [];
+    if (image_updates) {
+      parsedImageUpdates =
+        typeof image_updates === "string"
+          ? JSON.parse(image_updates)
+          : image_updates;
     }
 
     // Xóa file ảnh cũ trên Cloudinary
@@ -197,6 +231,10 @@ const Product = {
           color: meta.color || null,
           is_thumbnail:
             meta.is_thumbnail !== undefined ? meta.is_thumbnail : false, // Nếu k có sẽ tự tính toán logic DB
+          is_variant_thumbnail:
+            meta.is_variant_thumbnail !== undefined
+              ? meta.is_variant_thumbnail
+              : false,
         };
       });
 
@@ -210,12 +248,20 @@ const Product = {
       newImages.length > 0 ? newImages : null,
       parsedDeletedImages,
       thumbnail_id || null,
+      parsedVariantThumbnailIds,
+      parsedImageOrder,
+      parsedImageUpdates,
     );
 
     if (!success) {
       throw new ApiError(404, "Cập nhật thất bại hoặc không tìm thấy sản phẩm");
     }
-    await ActivityLog.logAction(req.user.id, 'UPDATE_PRODUCT', `Đã cập nhật thông tin sản phẩm`, req.params.id);
+    await ActivityLog.logAction(
+      req.user.id,
+      "UPDATE_PRODUCT",
+      `Đã cập nhật thông tin sản phẩm`,
+      req.params.id,
+    );
     res.json({ message: "Cập nhật thành công" });
   }),
 
@@ -243,7 +289,12 @@ const Product = {
     if (!success) {
       throw new ApiError(500, "Lỗi khi xóa sản phẩm khỏi cơ sở dữ liệu");
     }
-    await ActivityLog.logAction(req.user.id, 'DELETE_PRODUCT', `Đã xóa sản phẩm`, productId);
+    await ActivityLog.logAction(
+      req.user.id,
+      "DELETE_PRODUCT",
+      `Đã xóa sản phẩm`,
+      productId,
+    );
     res.json({
       message: "Đã xóa sản phẩm và dọn sạch hình ảnh thành công",
     });
@@ -299,7 +350,12 @@ const Product = {
     }
 
     const ticketId = await ProductModel.createStockTicket(staffId, ticketData);
-    await ActivityLog.logAction(staffId, 'CREATE_STOCK_TICKET', `Đã tạo phiếu nhập kho mới`, ticketId);
+    await ActivityLog.logAction(
+      staffId,
+      "CREATE_STOCK_TICKET",
+      `Đã tạo phiếu nhập kho mới`,
+      ticketId,
+    );
     res
       .status(201)
       .json({ message: "Lưu phiếu kiểm kho thành công", ticketId });

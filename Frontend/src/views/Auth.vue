@@ -42,6 +42,8 @@
               <v-text-field
                 v-model="registerData.name"
                 label="Họ và tên"
+                :readonly="isAuthReadonly"
+                @focus="isAuthReadonly = false"
                 variant="outlined"
                 density="compact"
                 color="#001a2d"
@@ -54,6 +56,8 @@
                 v-model="registerData.email"
                 label="Email"
                 type="email"
+                :readonly="isAuthReadonly"
+                @focus="isAuthReadonly = false"
                 variant="outlined"
                 density="compact"
                 color="#001a2d"
@@ -68,6 +72,8 @@
               <v-text-field
                 v-model="registerData.phone_number"
                 label="Số điện thoại"
+                :readonly="isAuthReadonly"
+                @focus="isAuthReadonly = false"
                 variant="outlined"
                 density="compact"
                 color="#001a2d"
@@ -84,6 +90,8 @@
                 v-model="registerData.password"
                 label="Mật khẩu"
                 :type="showRegisterPassword ? 'text' : 'password'"
+                :readonly="isAuthReadonly"
+                @focus="isAuthReadonly = false"
                 variant="outlined"
                 density="compact"
                 color="#001a2d"
@@ -107,6 +115,8 @@
                 v-model="registerData.confirmPassword"
                 label="Xác nhận mật khẩu"
                 :type="showRegisterConfirmPassword ? 'text' : 'password'"
+                :readonly="isAuthReadonly"
+                @focus="isAuthReadonly = false"
                 variant="outlined"
                 density="compact"
                 color="#001a2d"
@@ -191,6 +201,8 @@
                 label="Email hoặc Số điện thoại"
                 variant="outlined"
                 color="#001a2d"
+                :readonly="isAuthReadonly"
+                @focus="isAuthReadonly = false"
                 prepend-inner-icon="mdi-account-outline"
                 required
                 class="auth-field"
@@ -481,6 +493,8 @@ const route = useRoute();
 
 const isSignUp = ref(route.name === "register");
 
+// Thêm biến này vào gần chỗ khai báo loginData
+const isAuthReadonly = ref(true);
 watch(
   () => route.name,
   (name) => {

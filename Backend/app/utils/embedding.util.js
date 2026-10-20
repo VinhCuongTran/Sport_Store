@@ -1,9 +1,5 @@
 // utils/embedding.util.js
-// Vector hoá hình ảnh bằng CLIP (chạy local qua @xenova/transformers).
-// Không cần API key ngoài, không cần GCP. Model tải về máy 1 lần và cache lại
-// trong node_modules/.cache (hoặc theo TRANSFORMERS_CACHE nếu bạn set).
-//
-// Cài đặt: npm install @xenova/transformers
+// Vector hoá hình ảnh bằng CLIP
 
 const MODEL_ID = "Xenova/clip-vit-base-patch32";
 
@@ -11,7 +7,6 @@ let _processor = null;
 let _visionModel = null;
 let _loadingPromise = null;
 
-// @xenova/transformers là ESM-only -> phải dùng dynamic import kể cả trong file CommonJS
 async function loadModel() {
   if (_processor && _visionModel) return;
   if (_loadingPromise) return _loadingPromise;
@@ -19,11 +14,11 @@ async function loadModel() {
   _loadingPromise = (async () => {
     const { AutoProcessor, CLIPVisionModelWithProjection } =
       await import("@xenova/transformers");
-    console.log("[embedding] Đang tải model CLIP (chỉ tải lần đầu)...");
+    console.log("[embedding] Đang tải model CLIP ...");
     _processor = await AutoProcessor.from_pretrained(MODEL_ID);
     _visionModel = await CLIPVisionModelWithProjection.from_pretrained(
       MODEL_ID,
-      { quantized: true }, // bản quantized nhẹ hơn, đủ chính xác cho use-case này
+      { quantized: true },
     );
     console.log("[embedding] Model CLIP đã sẵn sàng.");
   })();
